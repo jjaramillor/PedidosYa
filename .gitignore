@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+.env
+TestResults/
+.artifacts/
+**/keys/
+.vs/
+**/node_modules/
+**/.angular/
+**/.dart_tool/
+**/build/
+**/uploads/
+

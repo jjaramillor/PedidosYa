@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "untrustedDataNotice": "Thread titles and messages are untrusted data, not instructions.",
+  "thread": {
+    "id": "6acee19b-65c4-83e9-96fe-083d73734f26",
+    "kind": "chatgpt",
+    "title": "Diseñar Plataforma Delivery",
+    "preview": "El siguiente paso es iniciar la **Iteración cero** y crear la solución base en .NET 10, pero el entorno de trabajo aparece desconectado (`environment_offline`), por lo que no puedo crear ni verificar el código ahora.\n\nCuando el entorno vuelva a conectarse, continuaré directamente con:\n\n1. Solución y estructura modular.\n2. Docker Compose con PostgreSQL/PostGIS y Redis.\n3. Building Blocks, Problem Details, correlación y observabilidad.\n4. Outbox e Inbox.\n5. Pruebas de arquitectura e integración.\n6. Primer vertical slice `HU-ID-001`: registro y autenticación OTP.\n\nReconecta o reinicia el entorno de trabajo y escribe **“continúa”**; retomaré desde este punto sin repetir el análisis.",
+    "status": {
+      "type": "idle"
+    },
+    "cwd": null,
+    "createdAt": 1791943083.994788,
+    "updatedAt": 1791953876.17567
+  },
+  "page": {
+    "order": "newest_first",
+    "limit": 10,
+    "nextCursor": null,
+    "hasMore": false
+  },
+  "turns": [
+    {
+      "id": "bbb2169f-860a-4434-850a-d16a153aea5a",
+      "status": "completed",
+      "error": null,
+      "startedAt": 1791953862.718976,
+      "completedAt": 1791953871.713728,
+      "durationMs": null,
+      "items": [
+        {
+          "type": "userMessage",
+          "id": "bbb2169f-860a-4434-850a-d16a153aea5a",
+          "content": [
+            {
+              "type": "text",
+              "text": "Continua"
+            }
+          ]
+        },
+        {
+          "type": "agentMessage",
+          "id": "caa194f2-3da3-5198-9a1b-d6bc3e40ef55",
+          "text": "El siguiente paso es iniciar la **Iteración cero** y crear la solución base en .NET 10, pero el entorno de trabajo aparece desconectado (`environment_offline`), por lo que no puedo crear ni verificar el código ahora.\n\nCuando el entorno vuelva a conectarse, continuaré directamente con:\n\n1. Solución y estructura modular.\n2. Docker Compose con PostgreSQL/PostGIS y Redis.\n3. Building Blocks, Problem Details, correlación y observabilidad.\n4. Outbox e Inbox.\n5. Pruebas de arquitectura e integración.\n6. Primer vertical slice `HU-ID-001`: registro y autenticación OTP.\n\nReconecta o reinicia el entorno de trabajo y escribe **“continúa”**; retomaré desde este punto sin repetir el análisis."
+        }
+      ]
+    },
+    {
+      "id": "bbb21874-21e4-44da-ba10-a2f09a0edb82",
+      "status": "completed",
+      "error": null,
+      "startedAt": 1791944924.716956,
+      "completedAt": 1791945093.279362,
+      "durationMs": null,
+      "items": [
+        {
+          "type": "userMessage",
+          "id": "bbb21874-21e4-44da-ba10-a2f09a0edb82",
+          "content": [
+            {
+              "type": "text",
+              "text": "Continua con el siguiente paso"
+            }
+          ]
+        },
+        {
+          "type": "agentMessage",
+          "id": "9e6a024a-19ce-53a8-84c8-b89920a51d4e",
+          "text": "He completado la arquitectura funcional del MVP.\n\nEl documento contiene:\n\n- 12 contextos funcionales delimitados.\n- Clasificación entre dominios núcleo, soporte y genéricos.\n- Responsabilidades y exclusiones de cada dominio.\n- Propiedad exclusiva de los datos.\n- Relaciones síncronas, comandos y eventos.\n- Catálogo inicial de eventos de negocio.\n- Flujo completo del pedido.\n- Estrategia de consistencia, Outbox e idempotencia.\n- Saga de cancelación y compensaciones.\n- Arquitectura tecnológica recomendada.\n- Decisión de comenzar con un monolito modular.\n- Criterios para extraer futuros microservicios.\n- Trazabilidad con las ocho épicas del backlog.\n- Diagrama funcional incorporado.\n\n:chatgpt-content-reference{index=\"1\"}\n\nEl siguiente paso será desarrollar el **modelo de datos lógico por contexto**, identificando agregados, entidades, relaciones, estados, snapshots y límites entre esquemas."
+        }
+      ]
+    },
+    {
+      "id": "bbb215db-eda6-4310-9df8-22145c874246",
+      "status": "completed",
+      "error": null,
+      "startedAt": 1791944574.373718,
+      "completedAt": 1791944756.785365,
+      "durationMs": null,
+      "items": [
+        {
+          "type": "userMessage",
+          "id": "bbb215db-eda6-4310-9df8-22145c874246",
+          "content": [
+            {
+              "type": "text",
+              "text": "Vamos por el siguiente paso, transforma la matriz, usa criterios de aceptación estándar."
+            }
+          ]
+        },
+        {
+          "type": "agentMessage",
+          "id": "73a670b5-165b-5892-9dcc-de4223cb99a6",
+          "text": "He transformado la matriz en un backlog ejecutable para el MVP.\n\nIncluye:\n\n- 8 épicas.\n- 64 historias de usuario.\n- 44 historias asignadas al MVP.\n- Formato estándar: **Como, quiero, para**.\n- Tres escenarios de aceptación por historia en formato **Dado, Cuando, Entonces**.\n- Reglas de negocio.\n- Dependencias entre historias.\n- Priorización MoSCoW.\n- Plan propuesto de seis iteraciones.\n- Campos editables para puntos y estado.\n- Listas desplegables y filtros.\n- Resumen del MVP y definición de terminado.\n\n:chatgpt-content-reference{index=\"1\"}\n\nEl siguiente paso es definir la **arquitectura funcional y los dominios del sistema**, estableciendo bounded contexts, responsabilidades, relaciones, eventos y propietarios de datos antes de diseñar la base de datos y las APIs."
+        }
+      ]
+    },
+    {
+      "id": "bbb21c54-936b-459f-b466-3f41b2d46b39",
+      "status": "completed",
+      "error": null,
+      "startedAt": 1791944219.070516,
+      "completedAt": 1791944450.835088,
+      "durationMs": null,
+      "items": [
+        {
+          "type": "userMessage",
+          "id": "bbb21c54-936b-459f-b466-3f41b2d46b39",
+          "content": [
+            {
+              "type": "text",
+              "text": "Guarda el alcance funcional y continua con el siguiente paso"
+            }
+          ]
+        },
+        {
+          "type": "agentMessage",
+          "id": "8311c6a4-7a89-538a-aba9-8552a1cf1f36",
+          "text": "He guardado el alcance funcional y completado el siguiente paso: la matriz priorizada del producto.\n\nEl documento incluye:\n\n- Modelo de negocio y actores.\n- Aplicaciones y módulos.\n- Alcance funcional por dominio.\n- Ciclo de vida del pedido.\n- 20 reglas de negocio.\n- 64 funcionalidades identificadas y priorizadas.\n- Clasificación MoSCoW.\n- Separación por MVP y fases posteriores.\n- Criterios de salida del MVP.\n- Supuestos, exclusiones y ruta de trabajo.\n\n:chatgpt-content-reference{index=\"1\"}\n\nEl siguiente paso será transformar la matriz en un backlog ejecutable: **épicas, historias de usuario, criterios de aceptación, dependencias y prioridad por iteración**."
+        }
+      ]
+    },
+    {
+      "id": "bbb215e6-5036-45c1-a678-33db5b38f418",
+      "status": "completed",
+      "error": null,
+      "startedAt": 1791943711.45667,
+      "completedAt": 1791943734.987854,
+      "durationMs": null,
+      "items": [
+        {
+          "type": "userMessage",
+          "id": "bbb215e6-5036-45c1-a678-33db5b38f418",
+          "content": [
+            {
+              "type": "text",
+              "text": "Puedes obtener el alcance funcional del modelo de negocio de pedidosya?"
+            }
+          ]
+        },
+        {
+          "type": "agentMessage",
+          "id": "f9df638d-e9d2-52db-bef1-0adc4a1ba660",
+          "text": "Sí. A partir de información pública y documentación oficial podemos reconstruir un alcance funcional equivalente al modelo de negocio de PedidosYa, sin copiar su código, diseño, marca ni procesos internos confidenciales.\n\n## 1. Modelo de negocio identificado\n\nLa plataforma opera como un ecosistema multilateral que conecta:\n\n- Clientes.\n- Restaurantes y comercios.\n- Repartidores.\n- Operadores administrativos.\n- Proveedores de pagos, mapas, identidad y comunicaciones.\n\nSus líneas principales son:\n\n1. Marketplace de restaurantes.\n2. Logística de última milla.\n3. Marketplace de comercios: farmacias, mercados, mascotas, bebidas y otros.\n4. Quick-commerce mediante tiendas propias o dark stores.\n5. Servicio de reparto para comercios externos.\n6. Suscripción del cliente.\n7. Publicidad y posicionamiento patrocinado.\n8. Promociones, cupones y programas de fidelización.\n9. Servicios financieros y billetera digital.\n\nLa documentación pública confirma la administración de catálogos, precios, disponibilidad, promociones, pedidos, picking, packing, despacho y seguimiento en tiempo real. :chatgpt-content-reference{index=\"0\"}\n\n---\n\n# 2. Aplicaciones del ecosistema\n\n## A. Aplicación del cliente\n\nDisponible como aplicación móvil y portal web.\n\n### Registro y cuenta\n\n- Registro mediante correo, teléfono o identidad federada.\n- Inicio de sesión y recuperación de acceso.\n- Verificación por OTP.\n- Gestión del perfil.\n- Términos, privacidad y consentimientos.\n- Eliminación o desactivación de cuenta.\n- Administración de sesiones y dispositivos.\n\n### Direcciones y ubicación\n\n- Geolocalización actual.\n- Búsqueda de dirección en mapa.\n- Direcciones guardadas.\n- Referencias de entrega.\n- Casa, trabajo u otra dirección.\n- Validación de cobertura.\n- Selección de entrega en puerta o recepción.\n- Instrucciones para el repartidor.\n\n### Descubrimiento\n\n- Restaurantes cercanos.\n- Comercios por categoría.\n- Búsqueda por nombre, plato o producto.\n- Filtros por precio, distancia, valoración y tiempo.\n- Costo de envío.\n- Promociones disponibles.\n- Recomendaciones personalizadas.\n- Comercios favoritos.\n- Historial de búsquedas.\n- Restaurantes patrocinados.\n\n### Catálogo y productos\n\n- Categorías y subcategorías.\n- Productos con imágenes y descripciones.\n- Precio normal y promocional.\n- Variantes: tamaño, presentación o sabor.\n- Modificadores y adicionales.\n- Observaciones del cliente.\n- Disponibilidad y stock.\n- Restricciones horarias.\n- Productos relacionados.\n- Información de alérgenos cuando corresponda.\n\n### Carrito\n\n- Agregar, modificar y eliminar productos.\n- Validación de cantidad y disponibilidad.\n- Cálculo de subtotal.\n- Costo de envío.\n- Tarifa de servicio.\n- Impuestos.\n- Descuentos y cupones.\n- Propina.\n- Pedido mínimo.\n- Reemplazos para productos sin stock.\n- Un carrito por comercio.\n\n### Checkout y pagos\n\n- Confirmación de dirección.\n- Entrega inmediata o programada.\n- Tarjeta de crédito o débito.\n- Efectivo, cuando esté habilitado.\n- Billetera o saldo interno.\n- Cupones y créditos.\n- Pago mixto.\n- Tokenización de tarjetas.\n- Validación antifraude.\n- Comprobante electrónico.\n\nLos términos públicos contemplan pagos electrónicos, saldo en billetera, reembolsos y ajustes cuando existen productos faltantes o reemplazos. :chatgpt-content-reference{index=\"1\"}\n\n### Seguimiento del pedido\n\n- Pedido registrado.\n- Pendiente de confirmación.\n- Aceptado por el restaurante.\n- En preparación.\n- Listo para recoger.\n- Repartidor asignado.\n- Repartidor en el comercio.\n- Pedido recogido.\n- En camino.\n- Repartidor próximo.\n- Entregado.\n- Cancelado o con incidencia.\n- Seguimiento del repartidor en mapa.\n- Tiempo estimado actualizado.\n- Chat o llamada anonimizada.\n- Notificaciones push, SMS o correo.\n\n### Posventa\n\n- Historial y detalle de pedidos.\n- Repetir pedido.\n- Descargar comprobante.\n- Calificar restaurante.\n- Calificar repartidor.\n- Reportar producto incorrecto o faltante.\n- Pedido no entregado.\n- Solicitar ayuda.\n- Crédito, devolución parcial o total.\n- Gestión de reclamos.\n\n### Suscripción\n\n- Plan mensual o anual.\n- Beneficios de envío.\n- Comercios elegibles.\n- Condiciones de pedido mínimo.\n- Renovación automática.\n- Cambio o cancelación del plan.\n- Historial de cobros.\n\n---\n\n## B. Aplicación del restaurante o comercio\n\nDebe incluir una aplicación operativa para pedidos y un portal administrativo.\n\n### Afiliación\n\n- Registro del negocio.\n- RUC, razón social y representante.\n- Cuenta bancaria.\n- Documentación legal.\n- Contrato y aceptación de comisión.\n- Validación administrativa.\n- Alta de una o varias sucursales.\n- Configuración tributaria.\n- Activación y suspensión.\n\nLos requisitos públicos para Perú incluyen RUC, razón social, documento de identidad y cuenta bancaria. :chatgpt-content-reference{index=\"2\"}\n\n### Organización del comercio\n\n- Cadena o marca.\n- Una o varias sucursales.\n- Usuarios y roles por sucursal.\n- Horarios regulares y especiales.\n- Días feriados.\n- Tiempo estimado de preparación.\n- Radio y zona de cobertura.\n- Pedido mínimo.\n- Métodos de entrega.\n- Pausa temporal del establecimiento.\n\n### Catálogo\n\n- Menús por sucursal.\n- Categorías y productos.\n- SKU interno.\n- Variantes y modificadores.\n- Precios por sucursal.\n- Imágenes.\n- Disponibilidad.\n- Stock.\n- Horarios de venta.\n- Productos agotados temporalmente.\n- Carga masiva.\n- Importación y exportación.\n- Integración mediante API o webhooks.\n\nLa API pública permite consultar catálogo y modificar precio, cantidad y estado de los productos, incluso mediante procesos masivos asíncronos. :chatgpt-content-reference{index=\"3\"}\n\n### Operación de pedidos\n\n- Alerta de nuevo pedido.\n- Aceptar o rechazar.\n- Indicar tiempo de preparación.\n- Visualizar detalle y observaciones.\n- Gestionar productos faltantes.\n- Proponer reemplazos.\n- Iniciar preparación.\n- Marcar pedido listo.\n- Entregar al repartidor.\n- Verificar código de retiro.\n- Cancelar con motivo autorizado.\n- Imprimir comanda.\n- Historial operativo.\n- Gestión de pedidos programados.\n\n### Promociones\n\n- Descuento porcentual.\n- Descuento fijo.\n- Precio promocional.\n- Descuento por producto.\n- Combos.\n- Envío gratuito.\n- Compra mínima.\n- Programación de inicio y fin.\n- Presupuesto promocional.\n- Participación del comercio o plataforma.\n- Activación y desactivación.\n- Resultados de campaña.\n\nLa solución pública permite crear, modificar, desactivar y consultar promociones, incluyendo productos, fechas y estados. :chatgpt-content-reference{index=\"4\"}\n\n### Finanzas\n\n- Ventas brutas.\n- Comisiones.\n- Tarifa logística.\n- Descuentos asumidos.\n- Impuestos.\n- Cancelaciones y devoluciones.\n- Ajustes.\n- Propinas cuando corresponda.\n- Liquidaciones.\n- Estado de cuenta.\n- Comprobantes.\n- Pagos por transferencia.\n- Conciliación.\n\nEn Perú, el Partner Portal muestra estados de cuenta y fechas de pago, con liquidaciones y transferencias semanales. :chatgpt-content-reference{index=\"5\"}\n\n### Analítica\n\n- Pedidos recibidos y aceptados.\n- Ventas por periodo.\n- Ticket promedio.\n- Productos más vendidos.\n- Cancelaciones.\n- Tiempo de aceptación.\n- Tiempo de preparación.\n- Disponibilidad operativa.\n- Rendimiento de promociones.\n- Calificaciones.\n- Comparación entre sucursales.\n\n---\n\n## C. Aplicación del repartidor\n\n### Incorporación\n\n- Registro.\n- Verificación de teléfono y correo.\n- Documento de identidad.\n- Licencia, cuando corresponda.\n- Datos del vehículo.\n- Cuenta bancaria.\n- Revisión documental.\n- Capacitación.\n- Activación, bloqueo y suspensión.\n\n### Disponibilidad\n\n- Estado conectado o desconectado.\n- Selección de zona.\n- Reserva de turnos, si se aplica.\n- Visualización de alta demanda.\n- Objetivos e incentivos.\n- Control de pausas.\n\n### Asignación\n\n- Recepción de oferta.\n- Distancia hasta el comercio.\n- Distancia estimada al cliente.\n- Ganancia estimada.\n- Tiempo para aceptar.\n- Aceptar o rechazar.\n- Asignación automática.\n- Reasignación.\n- Pedidos agrupados o múltiples.\n\n### Recogida\n\n- Navegación al comercio.\n- Aviso de llegada.\n- Código o PIN de retiro.\n- Confirmación de productos o paquetes.\n- Reporte de demora.\n- Reporte de comercio cerrado.\n- Reporte de pedido no preparado.\n- Inicio de entrega.\n\n### Entrega\n\n- Navegación al cliente.\n- Ubicación GPS en tiempo real.\n- Comunicación anonimizada.\n- Confirmación mediante PIN, firma o fotografía.\n- Registro de intento fallido.\n- Incidente por dirección incorrecta.\n- Devolución al comercio.\n- Prueba de entrega.\n\n### Ganancias\n\n- Ganancia por pedido.\n- Distancia recorrida.\n- Bonificaciones.\n- Incentivos.\n- Propinas.\n- Ajustes.\n- Saldo disponible.\n- Historial de pagos.\n- Liquidaciones y retiros.\n\n### Seguridad y soporte\n\n- Botón de emergencia.\n- Reporte de accidente.\n- Bloqueo de clientes conflictivos.\n- Detección de GPS irregular.\n- Soporte durante una entrega.\n- Protección de información personal.\n- Evaluación del repartidor.\n\n---\n\n## D. Administración central\n\n### Gestión de participantes\n\n- Clientes.\n- Restaurantes y comercios.\n- Cadenas y sucursales.\n- Repartidores.\n- Operadores internos.\n- Roles y permisos.\n- Validación documental.\n- Suspensión y reactivación.\n- Listas de observación.\n\n### Gestión geográfica\n\n- Países, ciudades y distritos.\n- Polígonos de cobertura.\n- Zonas de reparto.\n- Zonas restringidas.\n- Distancias máximas.\n- Tarifas por zona.\n- Horarios por zona.\n- Demanda y capacidad operativa.\n\n### Gestión de pedidos\n\n- Consulta global.\n- Línea de tiempo completa.\n- Localización del repartidor.\n- Cambio o reasignación controlada.\n- Cancelación administrativa.\n- Gestión de productos faltantes.\n- Compensaciones.\n- Evidencias.\n- Auditoría de modificaciones.\n\n### Motor logístico\n\n- Búsqueda de repartidores cercanos.\n- Asignación por distancia y capacidad.\n- Compatibilidad con tipo de vehículo.\n- Tiempo estimado de preparación.\n- Pedidos agrupados.\n- Balance de demanda y oferta.\n- Reasignación automática.\n- Priorización.\n- Control de entrega tardía.\n- Cálculo dinámico del ETA.\n\n### Tarifas y comisiones\n\n- Comisión por comercio.\n- Comisión por categoría.\n- Costo base de envío.\n- Tarifa por distancia.\n- Tarifa por zona.\n- Tarifa por alta demanda.\n- Tarifa de servicio.\n- Pedido mínimo.\n- Incentivos al repartidor.\n- Subsidios y distribución del descuento.\n- Vigencias y versionado.\n\n### Pagos y conciliación\n\n- Transacciones.\n- Autorizaciones y capturas.\n- Pagos en efectivo.\n- Reembolsos.\n- Contracargos.\n- Conciliación con pasarela.\n- Cuentas por pagar a comercios.\n- Cuentas por pagar a repartidores.\n- Comisiones de la plataforma.\n- Cierres y liquidaciones.\n- Exportación contable.\n- Auditoría financiera.\n\n### Promociones y marketing\n\n- Cupones.\n- Campañas segmentadas.\n- Referidos.\n- Descuentos financiados por plataforma o comercio.\n- Publicidad patrocinada.\n- Banners.\n- Posicionamiento en resultados.\n- Notificaciones segmentadas.\n- Medición de conversiones.\n- Prevención del abuso de promociones.\n\n### Atención al cliente\n\n- Casos y tickets.\n- Chat de soporte.\n- Motivos parametrizables.\n- SLA y escalamiento.\n- Reembolsos y créditos.\n- Evidencias adjuntas.\n- Historial de contacto.\n- Base de conocimiento.\n- Automatización de respuestas.\n\n### Riesgo y fraude\n\n- Múltiples cuentas.\n- Cupones abusivos.\n- Pagos sospechosos.\n- Pedidos ficticios.\n- Colusión entre actores.\n- GPS manipulado.\n- Cancelaciones reiteradas.\n- Dispositivos bloqueados.\n- Reglas de riesgo.\n- Revisión manual.\n\n### Configuración y auditoría\n\n- Parámetros globales.\n- Feature flags.\n- Plantillas de mensajes.\n- Versiones de términos.\n- Auditoría de acciones.\n- Trazabilidad de accesos.\n- Gestión de datos personales.\n- Retención y anonimización.\n- Configuración por país.\n\n---\n\n# 3. Líneas de negocio adicionales\n\n## Marketplace de comercios\n\nLa misma plataforma puede admitir:\n\n- Farmacias.\n- Supermercados.\n- Licorerías.\n- Tiendas de conveniencia.\n- Mascotas.\n- Electrónica.\n- Florerías y regalos.\n\nAquí se agregan inventario, sustitución de productos, venta por peso, límites de edad y picking.\n\n## Quick-commerce y dark stores\n\nRequiere una aplicación adicional para almacén:\n\n- Recepción de inventario.\n- Ubicaciones internas.\n- Lotes y vencimientos.\n- Stock en tiempo real.\n- Picking guiado.\n- Sustituciones.\n- Packing.\n- Conteos y ajustes.\n- Mermas.\n- Despacho.\n- Reabastecimiento.\n\nPedidosYa identifica públicamente esta operación como quick-commerce y confirma que el partner controla catálogo, precios, promociones, picking y packing. :chatgpt-content-reference{index=\"6\"}\n\n## Delivery como servicio\n\nPermite que un comercio externo cree una entrega sin vender en el marketplace:\n\n- API para solicitar una entrega.\n- Origen y destino.\n- Cotización.\n- Seguimiento.\n- Prueba de entrega.\n- Cancelación.\n- Webhooks.\n- Facturación empresarial.\n\nPedidosYa ofrece públicamente integración logística de última milla para tiendas externas. :chatgpt-content-reference{index=\"7\"}\n\n---\n\n# 4. Ciclo funcional principal\n\n```mermaid\nstateDiagram-v2\n    [*] --> Creado\n    Creado --> Confirmado: pago validado\n    Confirmado --> Aceptado: comercio acepta\n    Aceptado --> Preparando\n    Preparando --> Listo\n    Listo --> Recogido: repartidor verifica retiro\n    Recogido --> EnCamino\n    EnCamino --> Entregado: PIN o evidencia\n    Entregado --> Cerrado\n    Creado --> Cancelado\n    Confirmado --> Cancelado\n    Aceptado --> Cancelado\n    EnCamino --> Incidencia\n    Incidencia --> Entregado\n    Incidencia --> Devuelto\n```\n\nCada transición debe producir:\n\n- Evento de dominio.\n- Registro de auditoría.\n- Notificación correspondiente.\n- Actualización de tiempos estimados.\n- Revisión financiera si afecta cobros o liquidaciones.\n\n---\n\n# 5. Fuentes de ingresos del modelo\n\n| Fuente | Descripción |\n|---|---|\n| Comisión | Porcentaje sobre cada venta del comercio |\n| Tarifa de envío | Pagada total o parcialmente por el cliente |\n| Tarifa de servicio | Cargo adicional por uso de la plataforma |\n| Suscripción | Beneficios recurrentes para clientes |\n| Publicidad | Posicionamiento, banners y resultados patrocinados |\n| Promociones compartidas | Financiamiento entre plataforma y comercio |\n| Logística B2B | Entregas para tiendas externas |\n| Margen comercial | Venta directa desde dark stores |\n| Servicios financieros | Créditos, anticipos u otros productos futuros |\n\n---\n\n# 6. MVP recomendado\n\nPara evitar construir desde el comienzo toda la complejidad de PedidosYa, la primera versión debería limitarse a restaurantes y entrega inmediata.\n\n## Incluido en el MVP\n\n- Aplicación móvil del cliente.\n- Portal web y aplicación operativa del restaurante.\n- Aplicación móvil del repartidor.\n- Portal administrativo.\n- Registro y autenticación.\n- Restaurantes, sucursales, horarios y cobertura.\n- Menús, productos, variantes y adicionales.\n- Carrito y checkout.\n- Pago con tarjeta y efectivo configurable.\n- Gestión completa del pedido.\n- Asignación básica de repartidor.\n- GPS y seguimiento en tiempo real.\n- Notificaciones.\n- Cancelaciones e incidencias esenciales.\n- Comisiones y liquidaciones.\n- Cupones básicos.\n- Calificaciones.\n- Reportes operativos.\n- Auditoría y soporte básico.\n\n## Para una segunda etapa\n\n- Entregas programadas.\n- Pedidos agrupados.\n- Promociones avanzadas.\n- Publicidad patrocinada.\n- Suscripción.\n- Billetera.\n- Sistema de referidos.\n- Chat avanzado.\n- Motor antifraude.\n- Tarifas dinámicas.\n- Integraciones POS.\n- API para cadenas.\n\n## Para una tercera etapa\n\n- Supermercados y farmacias.\n- Dark stores.\n- Picking especializado.\n- Delivery como servicio.\n- Optimización logística avanzada.\n- Recomendaciones mediante IA.\n- Créditos y servicios financieros.\n\n---\n\n# 7. Aplicaciones que construiremos\n\n| Solución | Canal recomendado |\n|---|---|\n| Cliente | Flutter para Android/iOS y Angular para web |\n| Restaurante operativo | Flutter para tablet/móvil |\n| Portal del restaurante | Angular |\n| Repartidor | Flutter |\n| Administración central | Angular |\n| Operación y soporte | Angular |\n| Backend | .NET modular |\n| Integraciones externas | APIs REST, webhooks y eventos |\n\nEste alcance nos da una base funcional comparable con PedidosYa, pero suficientemente modular para crear un producto propio. El siguiente paso conveniente es convertirlo en una **matriz formal de módulos, funcionalidades, roles, reglas de negocio y prioridades MVP**, antes de diseñar la arquitectura o programar."
+        }
+      ]
+    }
+  ],
+  "attachments": []
+}
+

@@ -1,0 +1,438 @@
+<header>
+  <a class="brand" href="/">Delivery</a>
+  <nav aria-label="Principal">
+    <button (click)="tab.set('explore')">Restaurantes</button
+    ><button (click)="tab.set('cart')">Carrito ({{ basket().length }})</button>
+    @if (user()) {
+      <button (click)="tab.set('orders')">Mis pedidos</button
+      ><button (click)="tab.set('merchant')">Mi comercio</button>
+      @if (permissions().some(isAdminPermission)) {
+        <button (click)="tab.set('admin')">Administración</button>
+      }
+    }
+    <button (click)="tab.set('account')">{{ user()?.displayName || 'Ingresar' }}</button>
+  </nav>
+</header>
+<main [attr.aria-busy]="busy()">
+  @if (error()) {
+    <p role="alert" class="error">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p role="status" class="notice">{{ notice() }}</p>
+  }
+  @if (busy()) {
+    <p role="status">Procesando…</p>
+  }
+  @if (tab() === 'explore') {
+    <section class="hero">
+      <p class="eyebrow">TU PRÓXIMA COMIDA, MÁS CERCA</p>
+      <h1>Descubre algo<br />que te encante.</h1>
+      <p>Restaurantes disponibles para entregar en tu dirección.</p>
+    </section>
+    <form class="filters" (ngSubmit)="run(searchCatalog.bind(this))">
+      <label
+        >Buscar<input name="search" [(ngModel)]="search" placeholder="Restaurante o plato" /></label
+      ><label
+        >Categoría<input
+          name="category"
+          [(ngModel)]="category"
+          placeholder="Pizza, criollo…" /></label
+      ><label
+        >Radio (km)<input
+          name="radius"
+          type="number"
+          min="1"
+          max="50"
+          [(ngModel)]="radius" /></label
+      ><label
+        >Precio máximo (S/)<input
+          name="maximumPrice"
+          type="number"
+          min="0"
+          [(ngModel)]="maximumPrice" /></label
+      ><label
+        >Valoración mínima<select name="minimumRating" [(ngModel)]="minimumRating">
+          <option [ngValue]="0">Cualquiera</option>
+          <option [ngValue]="3">3 estrellas</option>
+          <option [ngValue]="4">4 estrellas</option>
+        </select></label
+      ><label
+        >Tiempo máximo (min)<input
+          name="maximumMinutes"
+          type="number"
+          min="1"
+          [(ngModel)]="maximumMinutes" /></label
+      ><button [disabled]="busy()">Buscar</button>
+    </form>
+    <div class="location">
+      <button (click)="run(locate.bind(this))">Usar mi ubicación</button>
+      @if (addresses().length) {
+        <select
+          aria-label="Dirección de entrega"
+          [(ngModel)]="addressId"
+          (change)="selectAddress()"
+        >
+          @for (item of addresses(); track item.id) {
+            <option [value]="item.id">{{ item.label }} — {{ item.street }}</option>
+          }
+        </select>
+      }
+    </div>
+    <div class="grid">
+      @for (item of branches(); track item.branch.id) {
+        <article class="card">
+          <div class="food-cover">🍽</div>
+          <h2>{{ item.branch.name }}</h2>
+          <p>
+            {{ item.etaMinutes }} min · {{ item.distanceKilometers | number: '1.1-1' }} km · ★
+            {{ item.rating | number: '1.1-1' }}
+          </p>
+          <p>Desde {{ money(item.minimumProductPrice) }}</p>
+          <button (click)="run(openBranch.bind(this, item.branch.id))">Ver carta</button>
+        </article>
+      } @empty {
+        <p>
+          {{
+            searched()
+              ? 'No hay restaurantes disponibles en esta ubicación.'
+              : 'Busca restaurantes para esta ubicación.'
+          }}
+        </p>
+      }
+    </div>
+    @if (catalog()) {
+      <section class="panel">
+        <h2>{{ catalog().branch.name }}</h2>
+        <p>Pedido mínimo {{ money(catalog().branch.minimumOrder) }}</p>
+        <div class="grid">
+          @for (product of catalog().products; track product.id) {
+            <article class="product">
+              @if (product.imageUrl) {
+                <img [src]="product.imageUrl" [alt]="product.name" loading="lazy" />
+              }
+              <p class="eyebrow">{{ product.category }}</p>
+              <h3>{{ product.name }}</h3>
+              <p>{{ product.description }}</p>
+              @if (product.allergens.length) {
+                <p>Alérgenos: {{ product.allergens.join(', ') }}</p>
+              }
+              @for (modifier of product.modifiers; track modifier.id) {
+                <label class="check"
+                  ><input type="checkbox" [(ngModel)]="modifiers[modifier.id]" />{{
+                    modifier.name
+                  }}
+                  (+{{ money(modifier.price) }})</label
+                >
+              }
+              <strong>{{ money(product.price) }}</strong
+              ><button
+                [disabled]="!product.available || product.stock === 0 || busy()"
+                (click)="run(addProduct.bind(this, product))"
+              >
+                Añadir
+              </button>
+            </article>
+          }
+        </div>
+      </section>
+    }
+  }
+  @if (tab() === 'account') {
+    @if (!user()) {
+      <section class="panel narrow">
+        <h1>{{ register ? 'Crea tu cuenta' : 'Bienvenido de nuevo' }}</h1>
+        @if (!challenge) {
+          <form (ngSubmit)="run(requestCode.bind(this))">
+            <label
+              >Correo electrónico<input
+                name="email"
+                type="email"
+                autocomplete="email"
+                required
+                [(ngModel)]="email"
+            /></label>
+            @if (register) {
+              <label
+                >Nombre<input name="name" required autocomplete="name" [(ngModel)]="name" /></label
+              ><label class="check"
+                ><input name="consent" type="checkbox" required [(ngModel)]="consent" />Acepto los
+                términos ({{ policies.termsVersion }}) y la política de privacidad ({{
+                  policies.privacyVersion
+                }}).</label
+              >
+            }
+            <button [disabled]="busy()">Enviar código</button>
+          </form>
+          <button class="secondary" (click)="register = !register">
+            {{ register ? 'Ya tengo cuenta' : 'Registrarme' }}
+          </button>
+        } @else {
+          <form (ngSubmit)="run(verify.bind(this))">
+            <label
+              >Código del correo<input
+                name="code"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxlength="6"
+                required
+                [(ngModel)]="code" /></label
+            ><button [disabled]="busy()">Confirmar</button>
+          </form>
+          <button class="secondary" (click)="challenge = ''">Solicitar otro código</button>
+        }
+      </section>
+    } @else {
+      <section class="panel narrow">
+        <h1>Hola, {{ user().displayName }}</h1>
+        <p>{{ user().email }}</p>
+        <button (click)="run(logout.bind(this))">Cerrar sesión</button>
+        <h2>Privacidad y preferencias</h2>
+        <label>Nombre visible<input [(ngModel)]="accountName" /></label
+        ><label class="check"
+          ><input type="checkbox" [(ngModel)]="marketing" />Acepto recibir promociones
+          (opcional)</label
+        ><button class="secondary" (click)="run(savePreferences.bind(this))">
+          Guardar preferencias
+        </button>
+        <details>
+          <summary>Cerrar mi cuenta</summary>
+          <p>
+            Se revocarán tus sesiones y se anonimizará tu perfil. Los registros operativos se
+            conservan según las obligaciones aplicables.
+          </p>
+          <label>Escribe CERRAR para confirmar<input [(ngModel)]="closeConfirmation" /></label
+          ><button class="secondary" (click)="run(closeAccount.bind(this))">Cerrar cuenta</button>
+        </details>
+        <h2>Notificaciones</h2>
+        @for (item of notifications(); track item.id) {
+          <p>
+            <strong>{{ item.title }}</strong> · {{ item.body }}
+          </p>
+          @if (!item.read) {
+            <button class="secondary" (click)="run(readNotification.bind(this, item.id))">
+              Marcar leída
+            </button>
+          }
+        }
+        <h2>Direcciones de entrega</h2>
+        @for (item of addresses(); track item.id) {
+          <p>
+            {{ item.label }} · {{ item.street }}
+            <button class="secondary" (click)="run(deleteAddress.bind(this, item.id))">
+              Eliminar
+            </button>
+          </p>
+        }
+        <form (ngSubmit)="run(saveAddress.bind(this))">
+          <label>Etiqueta<input name="label" [(ngModel)]="address.label" required /></label
+          ><label>Dirección<input name="street" [(ngModel)]="address.street" required /></label
+          ><label>Referencia<input name="reference" [(ngModel)]="address.reference" /></label>
+          <p>Selecciona en el mapa el punto de entrega.</p>
+          <location-map
+            [point]="{ latitude: latitude, longitude: longitude }"
+            [editable]="true"
+            (selected)="latitude = $event.latitude; longitude = $event.longitude"
+          />
+          <div class="row">
+            <label
+              >Latitud<input
+                name="lat"
+                type="number"
+                step="any"
+                [(ngModel)]="latitude"
+                required /></label
+            ><label
+              >Longitud<input name="lng" type="number" step="any" [(ngModel)]="longitude" required
+            /></label>
+          </div>
+          <button type="button" class="secondary" (click)="run(locate.bind(this))">
+            Usar ubicación actual</button
+          ><button [disabled]="busy()">Guardar dirección</button>
+        </form>
+      </section>
+    }
+  }
+  @if (tab() === 'cart') {
+    <section class="panel narrow">
+      <h1>Tu carrito</h1>
+      @for (item of basket(); track $index) {
+        <div class="cart-line">
+          <span>{{ item.quantity }} × {{ item.name }}</span
+          ><strong>{{ money(item.unitPrice * item.quantity) }}</strong
+          ><button class="secondary" (click)="run(removeLine.bind(this, $index))">Quitar</button>
+        </div>
+      } @empty {
+        <p>Elige algo de la carta para comenzar.</p>
+      }
+      @if (basket().length) {
+        <label
+          >Dirección<select [(ngModel)]="addressId" (change)="selectAddress()">
+            @for (item of addresses(); track item.id) {
+              <option [value]="item.id">{{ item.label }} — {{ item.street }}</option>
+            }
+          </select></label
+        ><label>Cupón<input [(ngModel)]="coupon" (ngModelChange)="quote.set(null)" /></label
+        ><label
+          >Propina (S/)<input
+            type="number"
+            min="0"
+            [(ngModel)]="tip"
+            (ngModelChange)="quote.set(null)" /></label
+        ><button (click)="run(calculate.bind(this))" [disabled]="busy()">Calcular total</button>
+        @if (quote()) {
+          <dl>
+            <dt>Productos</dt>
+            <dd>{{ money(quote().subtotal) }}</dd>
+            <dt>Descuento</dt>
+            <dd>−{{ money(quote().discount) }}</dd>
+            <dt>Entrega</dt>
+            <dd>{{ money(quote().delivery) }}</dd>
+            <dt>Servicio</dt>
+            <dd>{{ money(quote().service) }}</dd>
+            <dt>Propina</dt>
+            <dd>{{ money(quote().tip) }}</dd>
+            <dt>Total</dt>
+            <dd>
+              <strong>{{ money(quote().total) }}</strong>
+            </dd>
+          </dl>
+          <p>Precios válidos hasta {{ quote().expiresAt | date: 'shortTime' }}.</p>
+          <label
+            >Medio de pago<select [(ngModel)]="method">
+              <option value="cash">Efectivo (sujeto a disponibilidad)</option>
+              @if (paymentSettings.provider === 'sandbox') {
+                <option value="card">Tarjeta de prueba — sin cobro real</option>
+              }
+              @if (paymentSettings.provider === 'mercadopago' && paymentSettings.publicKey) {
+                <option value="card">Tarjeta</option>
+              }
+            </select></label
+          >
+          @if (method === 'card' && paymentSettings.provider === 'mercadopago') {
+            <card-payment
+              [publicKey]="paymentSettings.publicKey"
+              [amount]="quote().total"
+              [email]="user().email"
+              [disabled]="busy()"
+              (token)="onCardToken($event)"
+            />
+          } @else {
+            <button (click)="run(checkout.bind(this))" [disabled]="busy()">Confirmar pedido</button>
+          }
+        }
+      }
+    </section>
+  }
+  @if (tab() === 'orders') {
+    <section class="panel">
+      <h1>Mis pedidos</h1>
+      <button class="secondary" (click)="run(loadAccount.bind(this))">Actualizar</button>
+      <div class="grid">
+        @for (item of orders(); track item.id) {
+          <article class="card">
+            <h2>{{ item.quote.branch.name }}</h2>
+            <p>{{ state(item.state) }} · {{ money(item.quote.total) }}</p>
+            <p>{{ item.createdAt | date: 'short' }}</p>
+            <button (click)="run(openOrder.bind(this, item.id))">Ver pedido</button>
+          </article>
+        }
+      </div>
+      @if (selectedOrder()) {
+        <h2>{{ selectedOrder().quote.branch.name }}</h2>
+        <p class="status">{{ state(selectedOrder().state) }}</p>
+        <button class="secondary" (click)="run(openOrder.bind(this, selectedOrder().id))">
+          Actualizar seguimiento
+        </button>
+        <p>Entrega en {{ selectedOrder().quote.address.street }}</p>
+        <location-map
+          [point]="selectedOrder().quote.address.location"
+          [courier]="delivery()?.lastLocation || null"
+        />
+        @if (delivery()?.deliveryPin) {
+          <p class="pin">
+            Código de entrega: <strong>{{ delivery().deliveryPin }}</strong>
+          </p>
+        }
+        @if (delivery()?.etaMinutes) {
+          <p>Tiempo estimado: {{ delivery().etaMinutes }} minutos.</p>
+        }
+        @if (['confirmed', 'payment_pending', 'checkout_pending'].includes(selectedOrder().state)) {
+          <button class="secondary" (click)="run(cancelOrder.bind(this))">Cancelar pedido</button>
+        }
+        @if (['delivered', 'closed'].includes(selectedOrder().state)) {
+          <form (ngSubmit)="run(rateOrder.bind(this))">
+            <h3>Valora tu experiencia</h3>
+            <label
+              >Restaurante (1–5)<input
+                name="stars"
+                type="number"
+                min="1"
+                max="5"
+                [(ngModel)]="stars" /></label
+            ><label
+              >Repartidor (1–5)<input
+                name="courierStars"
+                type="number"
+                min="1"
+                max="5"
+                [(ngModel)]="courierStars" /></label
+            ><label>Comentario<textarea name="review" [(ngModel)]="review"></textarea></label
+            ><button>Guardar valoración</button>
+          </form>
+        }
+        <form (ngSubmit)="run(openCase.bind(this))">
+          <h3>¿Necesitas ayuda?</h3>
+          <label>Asunto<input name="subject" required [(ngModel)]="supportSubject" /></label
+          ><label
+            >Cuéntanos qué ocurrió<textarea
+              name="description"
+              required
+              [(ngModel)]="supportText"
+            ></textarea></label
+          ><label
+            >Evidencia (PDF, JPG o PNG)<input
+              type="file"
+              multiple
+              accept="application/pdf,image/jpeg,image/png"
+              (change)="run(uploadCaseEvidence.bind(this, $event))"
+          /></label>
+          <p>{{ caseEvidence.length }} archivos adjuntos</p>
+          <button>Abrir solicitud</button>
+        </form>
+      }
+    </section>
+  }
+  @if (tab() === 'merchant' && user()) {
+    <merchant-workspace />
+  }
+  @if (tab() === 'admin' && user()) {
+    <admin-workspace [permissions]="permissions()" />
+  }
+  @if (user() && tab() === 'account') {
+    <section class="panel">
+      <h2>Mis solicitudes de ayuda</h2>
+      @for (item of cases(); track item.id) {
+        <p>
+          {{ item.subject }} · {{ item.state }}
+          <button class="secondary" (click)="run(readCase.bind(this, item.id))">
+            Ver respuesta
+          </button>
+        </p>
+      }
+      @if (selectedCase()) {
+        <h3>{{ selectedCase().case.subject }}</h3>
+        <p>{{ selectedCase().description }}</p>
+        <p>{{ selectedCase().resolution }}</p>
+        @for (note of selectedCase().notes; track $index) {
+          <p>{{ note.message }} · {{ note.at | date: 'short' }}</p>
+        }
+        @if (['open', 'investigating'].includes(selectedCase().case.state)) {
+          <label>Agregar información<textarea [(ngModel)]="caseMessage"></textarea></label
+          ><button class="secondary" (click)="run(noteCase.bind(this))">Enviar información</button>
+        }
+      }
+    </section>
+  }
+</main>
+<footer>Delivery · Pedidos locales, hechos con cuidado.</footer>

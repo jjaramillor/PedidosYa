@@ -1,0 +1,360 @@
+{
+  "source": "Alcance_funcional_plataforma_delivery.docx",
+  "section": "7 Matriz funcional priorizada",
+  "sha256": "1904bd0b1bb181dd2d1602a0fef4e5f66c8a4ef49e6344096c5340a45567c787",
+  "total": 44,
+  "features": [
+    {
+      "ID": "ID-001",
+      "Dominio": "Identidad",
+      "Funcionalidad": "Registro y OTP",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ID-002",
+      "Dominio": "Identidad",
+      "Funcionalidad": "Inicio y recuperación de sesión",
+      "Actor": "Todos",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ID-003",
+      "Dominio": "Identidad",
+      "Funcionalidad": "Roles y permisos",
+      "Actor": "Administración",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ID-005",
+      "Dominio": "Identidad",
+      "Funcionalidad": "Gestión de consentimiento y cuenta",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "CLI-001",
+      "Dominio": "Cliente",
+      "Funcionalidad": "Direcciones y geolocalización",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "CLI-002",
+      "Dominio": "Cliente",
+      "Funcionalidad": "Validación de cobertura",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "CLI-003",
+      "Dominio": "Cliente",
+      "Funcionalidad": "Búsqueda y filtros",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "CLI-005",
+      "Dominio": "Cliente",
+      "Funcionalidad": "Catálogo y detalle de producto",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "CLI-006",
+      "Dominio": "Cliente",
+      "Funcionalidad": "Carrito y totales",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "CLI-007",
+      "Dominio": "Cliente",
+      "Funcionalidad": "Checkout y confirmación",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "CLI-008",
+      "Dominio": "Cliente",
+      "Funcionalidad": "Seguimiento en tiempo real",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "CLI-010",
+      "Dominio": "Cliente",
+      "Funcionalidad": "Calificaciones",
+      "Actor": "Cliente",
+      "Prioridad": "Debería",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "COM-001",
+      "Dominio": "Comercio",
+      "Funcionalidad": "Afiliación y validación",
+      "Actor": "Comercio/Admin",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "COM-002",
+      "Dominio": "Comercio",
+      "Funcionalidad": "Cadenas y sucursales",
+      "Actor": "Comercio",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "COM-003",
+      "Dominio": "Comercio",
+      "Funcionalidad": "Horarios y pausas",
+      "Actor": "Comercio",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "COM-004",
+      "Dominio": "Comercio",
+      "Funcionalidad": "Menús, categorías y productos",
+      "Actor": "Comercio",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "COM-005",
+      "Dominio": "Comercio",
+      "Funcionalidad": "Variantes y adicionales",
+      "Actor": "Comercio",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "COM-006",
+      "Dominio": "Comercio",
+      "Funcionalidad": "Precio, stock y disponibilidad",
+      "Actor": "Comercio",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "COM-007",
+      "Dominio": "Comercio",
+      "Funcionalidad": "Gestión operativa del pedido",
+      "Actor": "Comercio",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "COM-010",
+      "Dominio": "Comercio",
+      "Funcionalidad": "Reportes y liquidaciones",
+      "Actor": "Comercio",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-001",
+      "Dominio": "Reparto",
+      "Funcionalidad": "Alta y documentos",
+      "Actor": "Repartidor/Admin",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-002",
+      "Dominio": "Reparto",
+      "Funcionalidad": "Disponibilidad y zona",
+      "Actor": "Repartidor",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-003",
+      "Dominio": "Reparto",
+      "Funcionalidad": "Oferta y aceptación",
+      "Actor": "Repartidor",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-004",
+      "Dominio": "Reparto",
+      "Funcionalidad": "Asignación automática básica",
+      "Actor": "Plataforma",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-005",
+      "Dominio": "Reparto",
+      "Funcionalidad": "Navegación y llegada",
+      "Actor": "Repartidor",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-006",
+      "Dominio": "Reparto",
+      "Funcionalidad": "PIN de retiro",
+      "Actor": "Repartidor/Comercio",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-007",
+      "Dominio": "Reparto",
+      "Funcionalidad": "GPS y seguimiento",
+      "Actor": "Repartidor",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-008",
+      "Dominio": "Reparto",
+      "Funcionalidad": "Prueba de entrega",
+      "Actor": "Repartidor/Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "REP-010",
+      "Dominio": "Reparto",
+      "Funcionalidad": "Ganancias e incentivos",
+      "Actor": "Repartidor",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "PAG-001",
+      "Dominio": "Pagos",
+      "Funcionalidad": "Pago con tarjeta",
+      "Actor": "Cliente",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "PAG-002",
+      "Dominio": "Pagos",
+      "Funcionalidad": "Pago en efectivo configurable",
+      "Actor": "Cliente",
+      "Prioridad": "Debería",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "PAG-003",
+      "Dominio": "Pagos",
+      "Funcionalidad": "Tokenización segura",
+      "Actor": "Plataforma",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "PAG-004",
+      "Dominio": "Pagos",
+      "Funcionalidad": "Reembolso parcial o total",
+      "Actor": "Soporte",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "PAG-005",
+      "Dominio": "Pagos",
+      "Funcionalidad": "Conciliación de pasarela",
+      "Actor": "Finanzas",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "PAG-006",
+      "Dominio": "Pagos",
+      "Funcionalidad": "Comisiones y liquidaciones",
+      "Actor": "Finanzas",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "PRO-001",
+      "Dominio": "Promociones",
+      "Funcionalidad": "Cupones básicos",
+      "Actor": "Marketing",
+      "Prioridad": "Debería",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ADM-001",
+      "Dominio": "Administración",
+      "Funcionalidad": "Gestión de participantes",
+      "Actor": "Administrador",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ADM-002",
+      "Dominio": "Administración",
+      "Funcionalidad": "Zonas y polígonos de cobertura",
+      "Actor": "Administrador",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ADM-003",
+      "Dominio": "Administración",
+      "Funcionalidad": "Tarifas y comisiones",
+      "Actor": "Administrador",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ADM-004",
+      "Dominio": "Administración",
+      "Funcionalidad": "Monitoreo global de pedidos",
+      "Actor": "Operaciones",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ADM-005",
+      "Dominio": "Administración",
+      "Funcionalidad": "Intervención y reasignación",
+      "Actor": "Operaciones",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ADM-006",
+      "Dominio": "Administración",
+      "Funcionalidad": "Casos, SLA y evidencias",
+      "Actor": "Soporte",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ADM-007",
+      "Dominio": "Administración",
+      "Funcionalidad": "Parámetros y feature flags",
+      "Actor": "Administrador",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    },
+    {
+      "ID": "ADM-008",
+      "Dominio": "Administración",
+      "Funcionalidad": "Auditoría",
+      "Actor": "Administrador",
+      "Prioridad": "Debe",
+      "Entrega": "MVP"
+    }
+  ]
+}

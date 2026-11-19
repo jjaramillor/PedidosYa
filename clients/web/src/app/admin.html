@@ -1,0 +1,444 @@
+<h1>Operación de la plataforma</h1>
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="notice" role="status">{{ notice() }}</p>
+}
+@if (busy()) {
+  <p role="status">Procesando…</p>
+}
+<label
+  >Motivo de los cambios<input
+    [(ngModel)]="reason"
+    placeholder="Describe por qué se realiza la intervención" /></label
+><button (click)="run(reload.bind(this))">Actualizar operación</button>
+@if (can('participants.manage')) {
+  <section class="panel">
+    <h2>Participantes</h2>
+    <div class="grid">
+      @for (item of merchants(); track item.id) {
+        <article class="card">
+          <h3>{{ item.name }}</h3>
+          <p>{{ item.taxId }} · {{ item.status }}</p>
+          <p>Cuenta bancaria: {{ item.bankAccount }}</p>
+          @for (id of item.documentIds; track id) {
+            <button class="secondary" (click)="run(document.bind(this, id))">
+              Descargar documento
+            </button>
+          }
+          <div class="row">
+            <button (click)="run(decide.bind(this, 'merchant', item.id, 'approved'))">
+              Aprobar</button
+            ><button
+              class="secondary"
+              (click)="run(decide.bind(this, 'merchant', item.id, 'rejected'))"
+            >
+              Rechazar</button
+            ><button
+              class="secondary"
+              (click)="run(decide.bind(this, 'merchant', item.id, 'suspended'))"
+            >
+              Suspender
+            </button>
+          </div>
+        </article>
+      }
+      @for (item of couriers(); track item.id) {
+        <article class="card">
+          <h3>{{ courierName(item) }} · {{ item.vehicle }}</h3>
+          <p>{{ item.status }} · {{ item.available ? 'Disponible' : 'No disponible' }}</p>
+          @for (id of item.documentIds; track id) {
+            <button class="secondary" (click)="run(document.bind(this, id))">
+              Descargar documento
+            </button>
+          }
+          <button (click)="run(decide.bind(this, 'courier', item.id, 'approved'))">Aprobar</button
+          ><button
+            class="secondary"
+            (click)="run(decide.bind(this, 'courier', item.id, 'suspended'))"
+          >
+            Suspender
+          </button>
+        </article>
+      }
+    </div>
+  </section>
+}
+@if (can('identity.users.manage')) {
+  <section class="panel">
+    <h2>Cuentas de usuario</h2>
+    <label>Buscar por nombre o correo<input [(ngModel)]="userSearch" /></label
+    ><button (click)="run(searchUsers.bind(this))">Buscar</button>
+    @for (item of users(); track item.id) {
+      <div class="cart-line">
+        <span>{{ item.displayName }} · {{ item.email }} · {{ item.status }}</span
+        ><button
+          class="secondary"
+          (click)="
+            run(userStatus.bind(this, item.id, item.status === 'active' ? 'blocked' : 'active'))
+          "
+        >
+          {{ item.status === 'active' ? 'Bloquear' : 'Activar' }}
+        </button>
+      </div>
+    }
+  </section>
+}
+@if (can('configuration.manage')) {
+  <section class="panel">
+    <h2>Zonas, tarifas y comisiones</h2>
+    @for (item of zones(); track item.id) {
+      <button class="secondary" (click)="editZone(item)">{{ item.configuration.name }}</button>
+    }
+    <button class="secondary" (click)="zoneId = ''">Nueva zona</button>
+    <form (ngSubmit)="run(saveZone.bind(this))">
+      <label>Nombre<input name="zoneName" required [(ngModel)]="zone.name" /></label>
+      <h3>Límites de cobertura</h3>
+      <p>Indica los vértices del polígono en orden.</p>
+      @for (point of points; track $index) {
+        <div class="row">
+          <label
+            >Latitud<input
+              [name]="'lat' + $index"
+              type="number"
+              step="any"
+              [(ngModel)]="point.latitude" /></label
+          ><label
+            >Longitud<input
+              [name]="'lng' + $index"
+              type="number"
+              step="any"
+              [(ngModel)]="point.longitude"
+          /></label>
+        </div>
+      }
+      <button
+        type="button"
+        class="secondary"
+        (click)="points.push({ latitude: -12, longitude: -77 })"
+      >
+        Añadir vértice
+      </button>
+      <div class="row">
+        <label
+          >Entrega base (S/)<input
+            name="delivery"
+            type="number"
+            step="0.01"
+            min="0"
+            [(ngModel)]="zone.deliveryBase" /></label
+        ><label
+          >Por km (S/)<input
+            name="km"
+            type="number"
+            step="0.01"
+            min="0"
+            [(ngModel)]="zone.perKilometer" /></label
+        ><label
+          >Servicio (S/)<input
+            name="service"
+            type="number"
+            step="0.01"
+            min="0"
+            [(ngModel)]="zone.serviceFee"
+        /></label>
+      </div>
+      <div class="row">
+        <label
+          >Comisión (%)<input
+            name="commission"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            [(ngModel)]="zone.commission" /></label
+        ><label
+          >Repartidor base (S/)<input
+            name="courierBase"
+            type="number"
+            step="0.01"
+            min="0"
+            [(ngModel)]="zone.courierBase" /></label
+        ><label
+          >Plazo de aceptación (segundos)<input
+            name="acceptance"
+            type="number"
+            min="30"
+            max="3600"
+            [(ngModel)]="zone.acceptanceSeconds"
+        /></label>
+      </div>
+      <label class="check"
+        ><input name="active" type="checkbox" [(ngModel)]="zone.active" />Zona activa</label
+      ><label class="check"
+        ><input name="cash" type="checkbox" [(ngModel)]="zone.cashEnabled" />Permitir
+        efectivo</label
+      ><button [disabled]="busy()">Guardar zona</button>
+    </form>
+    <h3>Parámetros operativos</h3>
+    @for (item of parameters(); track item.name) {
+      @if (item.name.endsWith('.enabled')) {
+        <p>
+          {{ item.name }}: {{ item.value ? 'Habilitado' : 'Deshabilitado' }}
+          <button class="secondary" (click)="run(flag.bind(this, item.name, !item.value))">
+            Cambiar
+          </button>
+        </p>
+      }
+    }
+  </section>
+}
+@if (can('promotions.manage')) {
+  <section class="panel">
+    <h2>Crear cupón</h2>
+    <form (ngSubmit)="run(saveCoupon.bind(this))">
+      <label>Código<input name="code" required [(ngModel)]="coupon.code" /></label>
+      <div class="row">
+        <label
+          >Inicio<input
+            name="start"
+            type="datetime-local"
+            required
+            [(ngModel)]="coupon.startsAt" /></label
+        ><label
+          >Fin<input name="end" type="datetime-local" required [(ngModel)]="coupon.endsAt"
+        /></label>
+      </div>
+      <div class="row">
+        <label
+          >Descuento (%)<input
+            name="discount"
+            type="number"
+            min="1"
+            max="100"
+            [(ngModel)]="coupon.discountPercent" /></label
+        ><label
+          >Tope (S/)<input
+            name="cap"
+            type="number"
+            min="0.01"
+            step="0.01"
+            [(ngModel)]="coupon.maximumDiscount" /></label
+        ><label
+          >Pedido mínimo (S/)<input
+            name="min"
+            type="number"
+            min="0"
+            [(ngModel)]="coupon.minimumOrder"
+        /></label>
+      </div>
+      <div class="row">
+        <label
+          >Usos totales<input
+            name="total"
+            type="number"
+            min="1"
+            [(ngModel)]="coupon.totalLimit" /></label
+        ><label
+          >Usos por cliente<input
+            name="per"
+            type="number"
+            min="1"
+            [(ngModel)]="coupon.perCustomerLimit"
+        /></label>
+      </div>
+      <label class="check"
+        ><input name="funded" type="checkbox" [(ngModel)]="coupon.merchantFunded" />Financiado por
+        el comercio</label
+      ><button>Crear cupón</button>
+    </form>
+  </section>
+}
+@if (can('orders.operate')) {
+  <section class="panel">
+    <h2>Monitoreo e intervención</h2>
+    <div class="grid">
+      @for (item of orders(); track item.id) {
+        <article class="card">
+          <h3>{{ item.quote.branch.name }}</h3>
+          <p>{{ item.state }} · {{ money(item.quote.total) }}</p>
+          <p>{{ item.createdAt | date: 'short' }}</p>
+          <button (click)="run(openOrder.bind(this, item.id))">Intervenir</button>
+        </article>
+      }
+    </div>
+    @if (selectedOrder()) {
+      <h3>{{ selectedOrder().quote.branch.name }} · {{ selectedOrder().state }}</h3>
+      <button class="secondary" (click)="run(cancel.bind(this))">Cancelar pedido</button
+      ><label
+        >Repartidor<select [(ngModel)]="courierId">
+          @for (item of couriers(); track item.id) {
+            @if (item.status === 'approved') {
+              <option [value]="item.id">
+                {{ courierName(item) }} · {{ item.vehicle }} ·
+                {{ item.available ? 'Disponible' : 'No disponible' }}
+              </option>
+            }
+          }
+        </select></label
+      ><button (click)="run(reassign.bind(this))">Reasignar</button>
+      @if (can('finance.manage')) {
+        <label
+          >Importe a devolver (S/)<input
+            type="number"
+            min="0.01"
+            step="0.01"
+            [(ngModel)]="refundAmount" /></label
+        ><button (click)="run(refund.bind(this))">Reembolsar</button>
+        @if (selectedOrder().state === 'closed') {
+          <button class="secondary" (click)="run(incentive.bind(this))">
+            Registrar ese importe como incentivo al repartidor seleccionado
+          </button>
+        }
+      }
+    }
+  </section>
+}
+@if (can('support.manage')) {
+  <section class="panel">
+    <h2>Soporte y SLA</h2>
+    @for (item of cases(); track item.id) {
+      <p>
+        {{ item.subject }} · {{ item.state }} · Vence {{ item.dueAt | date: 'short' }}
+        {{ item.overdue ? '— Vencido' : '' }}
+        <button class="secondary" (click)="run(openCase.bind(this, item.id))">Atender</button>
+      </p>
+    }
+    @if (selectedCase()) {
+      <p>{{ selectedCase().description }}</p>
+      @if (can('payments.refund') || can('finance.manage')) {
+        <label
+          >Importe a devolver (S/)<input
+            type="number"
+            min="0.01"
+            step="0.01"
+            [(ngModel)]="refundAmount" /></label
+        ><button (click)="selectedOrder.set(selectedCase().order); run(refund.bind(this))">
+          Reembolsar pedido del caso
+        </button>
+      }
+      @for (id of selectedCase().evidenceIds; track id) {
+        <button class="secondary" (click)="run(document.bind(this, id))">Ver evidencia</button>
+      }
+      @for (note of selectedCase().notes; track $index) {
+        <p>{{ note.message }} · {{ note.at | date: 'short' }}</p>
+      }
+      <label
+        >Estado<select [(ngModel)]="caseState">
+          <option value="investigating">En investigación</option>
+          <option value="resolved">Resuelto</option>
+          <option value="closed">Cerrado</option>
+        </select></label
+      ><label>Resolución<textarea [(ngModel)]="resolution"></textarea></label
+      ><button (click)="run(resolve.bind(this))">Guardar resolución</button>
+    }
+  </section>
+}
+@if (can('finance.manage')) {
+  <section class="panel">
+    <h2>Finanzas</h2>
+    <button (click)="run(reconcile.bind(this))">Conciliar pagos</button>
+    @for (item of reconciliation(); track item.paymentId) {
+      <p>
+        {{ item.local }} / {{ item.remote }} ·
+        {{
+          item.simulated
+            ? 'Simulado, sin verificación bancaria'
+            : item.matches
+              ? 'Coincide'
+              : 'Diferencia'
+        }}
+      </p>
+    }
+    <label
+      >Tipo de cuenta<select [(ngModel)]="participantKind">
+        <option value="merchant">Comercio</option>
+        <option value="courier">Repartidor</option>
+      </select></label
+    ><label
+      >Participante<select [(ngModel)]="participantId">
+        @if (participantKind === 'merchant') {
+          @for (item of merchants(); track item.id) {
+            <option [value]="item.id">{{ item.name }}</option>
+          }
+        } @else {
+          @for (item of couriers(); track item.id) {
+            <option [value]="item.id">{{ item.vehicle }}</option>
+          }
+        }
+      </select></label
+    ><button (click)="run(report.bind(this))">Consultar saldo</button>
+    @if (statement()) {
+      <p>Pendiente: {{ money(statement().pending) }}</p>
+      @if (participantKind === 'courier' && statement().pending < 0) {
+        <p>El repartidor tiene efectivo por rendir.</p>
+        <label
+          >Importe recibido (S/)<input
+            type="number"
+            min="0.01"
+            step="0.01"
+            [(ngModel)]="refundAmount" /></label
+        ><label>Referencia del ingreso<input [(ngModel)]="paymentReference" /></label
+        ><button (click)="run(cashCollection.bind(this))">Registrar ingreso recibido</button>
+      }
+      <button (click)="run(closeSettlement.bind(this))">Cerrar liquidación</button>
+      @for (item of statement().settlements; track item.id) {
+        <p>{{ money(item.amount) }} · {{ item.paidAt ? 'Pagada' : 'Pendiente de pago' }}</p>
+        @if (!item.paidAt) {
+          <label>Referencia del pago realizado<input [(ngModel)]="paymentReference" /></label
+          ><button class="secondary" (click)="run(markPaid.bind(this, item.id))">
+            Registrar pago de liquidación
+          </button>
+        }
+      }
+    }
+  </section>
+}
+@if (can('platform.audit.read')) {
+  <section class="panel">
+    <h2>Auditoría</h2>
+    @for (item of audit(); track item.id) {
+      <p>
+        {{ item.occurredAt | date: 'short' }} · {{ item.module }} · {{ item.action }} —
+        {{ item.reason }}
+      </p>
+    }
+  </section>
+}
+
+@if (can('identity.roles.manage')) {
+  <section class="panel">
+    <h2>Roles y permisos</h2>
+    <button (click)="run(loadRoles.bind(this))">Consultar roles</button>
+    @for (item of roles(); track item.id) {
+      <button class="secondary" (click)="editRole(item)">{{ item.name }}</button>
+    }
+    <form (ngSubmit)="run(saveRole.bind(this))">
+      <label>Código de rol<input name="roleId" [(ngModel)]="roleId" required /></label
+      ><label>Nombre<input name="roleName" [(ngModel)]="roleName" required /></label>
+      @for (permission of rolePermissions(); track permission) {
+        <label class="check"
+          ><input [name]="permission" type="checkbox" [(ngModel)]="roleSelection[permission]" />{{
+            permission
+          }}</label
+        >
+      }
+      <button>Guardar rol</button>
+    </form>
+    <h3>Asignar roles a una cuenta</h3>
+    <label
+      >Cuenta<select [(ngModel)]="roleUser" (change)="run(loadAssignments.bind(this))">
+        @for (item of users(); track item.id) {
+          <option [value]="item.id">{{ item.displayName }} · {{ item.email }}</option>
+        }
+      </select></label
+    >
+    @for (item of roles(); track item.id) {
+      <label class="check"
+        ><input type="checkbox" [(ngModel)]="assignedRoles[item.id]" />{{ item.name }}</label
+      >
+    }
+    <button (click)="run(assignRoles.bind(this))">Asignar roles seleccionados</button>
+  </section>
+}

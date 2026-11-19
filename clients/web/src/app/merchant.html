@@ -1,0 +1,251 @@
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="notice" role="status">{{ notice() }}</p>
+}
+@if (busy()) {
+  <p role="status">Procesando…</p>
+}
+<h1>Tu restaurante</h1>
+<section class="panel">
+  <h2>Alta de comercio</h2>
+  <form (ngSubmit)="run(apply.bind(this))">
+    <div class="row">
+      <label>Nombre comercial<input name="name" required [(ngModel)]="application.name" /></label
+      ><label
+        >RUC / identificación fiscal<input name="tax" required [(ngModel)]="application.taxId"
+      /></label>
+    </div>
+    <label
+      >Cuenta bancaria<input name="bank" required [(ngModel)]="application.bankAccount" /></label
+    ><label
+      >Documentos (PDF, JPG o PNG)<input
+        type="file"
+        multiple
+        accept="application/pdf,image/jpeg,image/png"
+        (change)="run(upload.bind(this, $event))"
+    /></label>
+    <p>{{ application.documentIds.length }} documentos adjuntos</p>
+    <button [disabled]="busy() || !application.documentIds.length">Enviar solicitud</button>
+  </form>
+</section>
+@if (businesses().length) {
+  <section class="panel">
+    <h2>Comercios y sucursales</h2>
+    <label
+      >Comercio<select [(ngModel)]="merchantId">
+        @for (item of businesses(); track item.id) {
+          <option [value]="item.id">{{ item.name }} · {{ item.status }}</option>
+        }
+      </select></label
+    >
+    <form (ngSubmit)="run(saveBranch.bind(this))">
+      <h3>{{ editingBranchId ? 'Editar sucursal y horario diario' : 'Nueva sucursal' }}</h3>
+      @if (branches().length) {
+        <button type="button" class="secondary" (click)="editBranch()">
+          Editar sucursal seleccionada
+        </button>
+      }
+      <label>Nombre<input name="branchName" required [(ngModel)]="branch.name" /></label>
+      <div class="row">
+        <label
+          >Latitud<input name="lat" type="number" step="any" [(ngModel)]="branch.latitude" /></label
+        ><label
+          >Longitud<input name="lng" type="number" step="any" [(ngModel)]="branch.longitude"
+        /></label>
+      </div>
+      <div class="row">
+        <label
+          >Pedido mínimo (S/)<input
+            name="minimum"
+            type="number"
+            min="0"
+            [(ngModel)]="branch.minimumOrder" /></label
+        ><label
+          >Preparación (minutos)<input
+            name="prep"
+            type="number"
+            min="1"
+            [(ngModel)]="branch.preparationMinutes"
+        /></label>
+      </div>
+      <div class="row">
+        <label>Apertura diaria<input name="from" type="time" [(ngModel)]="branch.from" /></label
+        ><label>Cierre diario<input name="to" type="time" [(ngModel)]="branch.to" /></label>
+      </div>
+      <label class="check"
+        ><input name="branchActive" type="checkbox" [(ngModel)]="branch.active" />Sucursal
+        activa</label
+      >
+      <button [disabled]="busy()">Guardar sucursal</button>
+    </form>
+    <button class="secondary" (click)="run(report.bind(this))">Ver ingresos y liquidaciones</button>
+    @if (statement()) {
+      <p>Saldo disponible: {{ money(statement().pending) }}</p>
+      @for (movement of statement().movements; track movement.id) {
+        <p>
+          {{ movement.at | date: 'short' }} · {{ movement.kind }} · {{ money(movement.amount) }}
+        </p>
+      }
+      @for (item of statement().settlements; track item.id) {
+        <p>{{ money(item.amount) }} · {{ item.paidAt ? 'Pagada' : 'Pendiente' }}</p>
+      }
+    }
+  </section>
+}
+@if (branches().length) {
+  <section class="panel">
+    <label
+      >Sucursal<select [(ngModel)]="branchId" (change)="run(selectBranch.bind(this))">
+        @for (item of branches(); track item.id) {
+          <option [value]="item.id">{{ item.name }}</option>
+        }
+      </select></label
+    ><button class="secondary" (click)="run(pause.bind(this, 60))">Pausar una hora</button
+    ><button class="secondary" (click)="run(pause.bind(this, 0))">Reanudar pedidos</button>
+    <details>
+      <summary>Equipo de la sucursal (propietario)</summary>
+      <button class="secondary" (click)="run(loadTeam.bind(this))">Ver equipo</button>
+      @for (member of team(); track member.userId) {
+        <p>
+          {{ member.email || 'Cuenta inactiva' }} · {{ member.role }}
+          <button class="secondary" (click)="run(removeMember.bind(this, member.userId))">
+            Quitar
+          </button>
+        </p>
+      }
+      <label>Correo de una cuenta registrada<input type="email" [(ngModel)]="memberEmail" /></label
+      ><label
+        >Rol<select [(ngModel)]="memberRole">
+          <option value="operator">Operador de pedidos</option>
+          <option value="manager">Encargado de carta y pedidos</option>
+        </select></label
+      ><button (click)="run(saveMember.bind(this))">Añadir o actualizar integrante</button>
+    </details>
+    <h2>Pedidos</h2>
+    <div class="grid">
+      @for (item of orders(); track item.id) {
+        <article class="card">
+          <h3>Pedido · {{ item.createdAt | date: 'shortTime' }}</h3>
+          <p>{{ item.state }} · {{ money(item.quote.total) }}</p>
+          <button (click)="run(openOrder.bind(this, item.id))">Gestionar</button>
+        </article>
+      }
+    </div>
+    @if (selectedOrder()) {
+      <h3>{{ selectedOrder().state }}</h3>
+      @for (line of selectedOrder().quote.lines; track $index) {
+        <p>
+          {{ line.quantity }} × {{ line.name }}
+          @for (m of line.modifiers; track m.id) {
+            <span> · {{ m.name }}</span>
+          }
+        </p>
+      }
+      @if (delivery()?.pickupPin) {
+        <p class="pin">
+          Código de retiro: <strong>{{ delivery().pickupPin }}</strong>
+        </p>
+      }
+      <label>Motivo / observación<input [(ngModel)]="reason" /></label>
+      <div class="row">
+        @if (selectedOrder().state === 'confirmed') {
+          <button (click)="run(action.bind(this, 'accepted'))">Aceptar</button>
+        }
+        @if (selectedOrder().state === 'accepted') {
+          <button (click)="run(action.bind(this, 'preparing'))">Preparar</button>
+        }
+        @if (selectedOrder().state === 'preparing') {
+          <button (click)="run(action.bind(this, 'ready'))">Listo para retiro</button>
+        }
+        @if (['confirmed', 'accepted', 'preparing', 'ready'].includes(selectedOrder().state)) {
+          <button class="secondary" (click)="run(action.bind(this, 'cancelled'))">Cancelar</button>
+        }
+      </div>
+    }
+  </section>
+  <section class="panel">
+    <h2>Carta</h2>
+    <div class="grid">
+      @for (item of products(); track item.id) {
+        <article class="card">
+          <h3>{{ item.name }}</h3>
+          <p>{{ money(item.price) }} · Stock {{ item.stock }}</p>
+          <p>{{ item.available ? 'Disponible' : 'Pausado' }}</p>
+          <button (click)="editProduct(item)">Editar</button>
+        </article>
+      }
+    </div>
+    <button class="secondary" (click)="newProduct()">Nuevo producto</button>
+    <form (ngSubmit)="run(saveProduct.bind(this))">
+      <div class="row">
+        <label>Nombre<input name="productName" required [(ngModel)]="product.name" /></label
+        ><label>Categoría<input name="category" required [(ngModel)]="product.category" /></label>
+      </div>
+      <label
+        >Descripción<textarea
+          name="description"
+          [(ngModel)]="product.description"
+        ></textarea></label
+      ><label
+        >Foto (URL HTTPS)<input name="image" type="url" [(ngModel)]="product.imageUrl" /></label
+      ><label
+        >Alérgenos (separados por comas)<input name="allergens" [(ngModel)]="product.allergens"
+      /></label>
+      <div class="row">
+        <label
+          >Precio (S/)<input
+            name="price"
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="product.price" /></label
+        ><label
+          >Stock<input name="stock" type="number" min="0" [(ngModel)]="product.stock"
+        /></label>
+      </div>
+      <label class="check"
+        ><input name="available" type="checkbox" [(ngModel)]="product.available" />Disponible</label
+      >
+      <h3>Variantes y extras</h3>
+      @for (item of product.modifiers; track item.id) {
+        <p>
+          {{ item.group }} · {{ item.name }} (+S/ {{ item.price }})
+          <button type="button" class="secondary" (click)="product.modifiers.splice($index, 1)">
+            Quitar
+          </button>
+        </p>
+      }
+      <div class="row">
+        <label>Grupo<input name="group" [(ngModel)]="option.group" /></label
+        ><label>Opción<input name="option" [(ngModel)]="option.name" /></label
+        ><label
+          >Precio adicional (S/)<input
+            name="optionPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="option.price"
+        /></label>
+      </div>
+      <div class="row">
+        <label
+          >Mínimo de selecciones<input
+            name="min"
+            type="number"
+            min="0"
+            [(ngModel)]="option.minimumSelections" /></label
+        ><label
+          >Máximo de selecciones<input
+            name="max"
+            type="number"
+            min="1"
+            [(ngModel)]="option.maximumSelections"
+        /></label>
+      </div>
+      <button type="button" class="secondary" (click)="addOption()">Añadir opción</button
+      ><button [disabled]="busy()">Guardar producto</button>
+    </form>
+  </section>
+}
