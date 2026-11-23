@@ -101,7 +101,7 @@ public sealed class DeliveryService(NpgsqlDataSource source,IOrderDirectory orde
     if(attempts>=5||!matches)
     {
      if(attempts<5)await ExecuteAsync(db,tx,"UPDATE deliveries.deliveries SET pickup_attempts=pickup_attempts+CASE WHEN @pickup THEN 1 ELSE 0 END,drop_attempts=drop_attempts+CASE WHEN @pickup THEN 0 ELSE 1 END WHERE order_id=@id",ct,("pickup",request.State=="picked_up"),("id",order));
-     await tx.CommitAsync(ct);throw new ApiException(401,"invalid_delivery_pin","PIN inválido o bloqueado. Solicita soporte.");
+     await tx.CommitAsync(ct);throw new ApiException(422,"invalid_delivery_pin","PIN inválido o bloqueado. Solicita soporte.");
     }
    }
    if(request.State=="delivered"&&request.EvidenceId is Guid evidence)

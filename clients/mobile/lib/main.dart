@@ -22,8 +22,9 @@ class DeliveryApp extends StatelessWidget {
 }
 
 class CourierHome extends StatefulWidget {
-  const CourierHome({super.key, this.api});
+  const CourierHome({super.key, this.api, this.now});
   final DeliveryApi? api;
+  final DateTime Function()? now;
   @override
   State<CourierHome> createState() => _CourierHomeState();
 }
@@ -33,6 +34,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       DeliveryApi(
           baseUrl: const String.fromEnvironment('API_URL',
               defaultValue: 'https://localhost:8080'));
+  DateTime get now => widget.now?.call() ?? DateTime.now();
   final scroll = ScrollController();
   final email = TextEditingController();
   final code = TextEditingController();
@@ -50,6 +52,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   Map<String, dynamic>? order;
   Map<String, dynamic>? fulfillment;
   Timer? gps;
+  Timer? offerExpiry;
   String? trackedOrder;
   bool available = false;
   bool cashCollected = false;
@@ -85,17 +88,17 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    run(() async {
-      try {
-        await api.restore();
-        authenticated = true;
-        await reload();
-      } catch (_) {}
+    offerExpiry = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || offers.isEmpty) return;
+      final active = actionableOffers(offers, now);
+      if (active.length != offers.length) setState(() => offers = active);
     });
+    run(restoreSession);
   }
 
   @override
   void dispose() {
+    offerExpiry?.cancel();
     gps?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     api.dispose();
@@ -114,6 +117,17 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       gps?.cancel();
       gps = null;
       trackedOrder = null;
+    }
+  }
+
+  Future<void> restoreSession() async {
+    try {
+      await api.restore();
+      authenticated = true;
+      await reload();
+    } on DeliveryApiException catch (error) {
+      if (error.statusCode != 401) rethrow;
+      authenticated = false;
     }
   }
 
@@ -167,7 +181,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       });
     }
     offers = actionableOffers(
-        await api.call('/couriers/offers') as List<dynamic>, DateTime.now());
+        await api.call('/couriers/offers') as List<dynamic>, now);
     deliveries = await api.call('/couriers/deliveries');
   }
 
@@ -352,6 +366,10 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.error))),
             if (!authenticated) ...[
+              if (error != null)
+                OutlinedButton(
+                    onPressed: busy ? null : () => run(restoreSession),
+                    child: const Text('Reintentar sesión guardada')),
               const Text('Ingresa con el código de tu correo',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               TextField(
@@ -541,6 +559,10 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                         fontSize: 22, fontWeight: FontWeight.bold)),
                 Text('Destino: ${order!['quote']['address']['street']}'),
                 Text('Estado: ${fulfillment!['state']}'),
+                OutlinedButton(
+                    onPressed:
+                        busy ? null : () => run(() => open(order!['id'])),
+                    child: const Text('Actualizar estado de entrega')),
                 OutlinedButton(
                     onPressed: busy ? null : () => run(navigate),
                     child: const Text('Abrir navegación')),

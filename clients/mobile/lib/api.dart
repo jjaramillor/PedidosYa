@@ -3,6 +3,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
+class DeliveryApiException implements Exception {
+  DeliveryApiException(this.statusCode, this.message);
+  final int statusCode;
+  final String message;
+  @override
+  String toString() => 'Exception: $message';
+}
+
 class DeliveryApi {
   DeliveryApi({required this.baseUrl, http.Client? client})
       : _client = client ?? http.Client();
@@ -41,11 +49,13 @@ class DeliveryApi {
       }
     }
     if (response.statusCode >= 400) {
-      throw Exception(value is Map
-          ? value['detail'] ??
-              value['title'] ??
-              'No se pudo completar la operación.'
-          : 'Servicio no disponible.');
+      throw DeliveryApiException(
+          response.statusCode,
+          value is Map
+              ? value['detail'] ??
+                  value['title'] ??
+                  'No se pudo completar la operación.'
+              : 'Servicio no disponible.');
     }
     return value;
   }
@@ -60,14 +70,20 @@ class DeliveryApi {
 
   Future<void> restore() async {
     final refresh = await _storage.read(key: 'delivery.refresh');
-    if (refresh == null) throw Exception('Inicia sesión para continuar.');
+    if (refresh == null) {
+      throw DeliveryApiException(401, 'Inicia sesión para continuar.');
+    }
     try {
       final session = await call('/identity/sessions/refresh',
           method: 'POST', body: {'refreshToken': refresh}, retry: false);
       await _store(session);
-    } catch (_) {
-      _access = null;
-      await _storage.delete(key: 'delivery.refresh');
+    } on DeliveryApiException catch (error) {
+      // Only a definitive authentication rejection invalidates the saved session.
+      // Network errors, rate limits and server outages must remain recoverable.
+      if (error.statusCode == 401) {
+        _access = null;
+        await _storage.delete(key: 'delivery.refresh');
+      }
       rethrow;
     }
   }

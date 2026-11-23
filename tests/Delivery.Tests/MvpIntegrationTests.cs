@@ -49,7 +49,7 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         await fixture.ResetAsync();
         var admin=CallerFor(await Register("admin@mvp.test"),true);
         var customer=await Register("customer@mvp.test");var customerCaller=CallerFor(customer);
-        var owner=CallerFor(await Register("merchant@mvp.test"));var courier=CallerFor(await Register("courier@mvp.test"));
+        var owner=CallerFor(await Register("merchant@mvp.test"));var courierSession=await Register("courier@mvp.test");var courier=CallerFor(courierSession);
         var zone=await Service<ConfigurationService>().SaveAsync(admin,Guid.NewGuid(),new("Lima","{\"type\":\"Polygon\",\"coordinates\":[[[-77.1,-12.1],[-77,-12.1],[-77,-12],[-77.1,-12],[-77.1,-12.1]]]}",true,500,100,100,1500,400,120,method=="cash","test zone"),Ct);
         if(method=="cash")await Service<ConfigurationService>().SaveParameterAsync(admin,"cash.enabled",new(System.Text.Json.JsonSerializer.SerializeToElement(true),"cash test"),Ct);
         var merchant=await Service<MerchantService>().ApplyAsync(owner,new("Restaurant","20123456789","bank-account",[await Document(owner)]),Ct);
@@ -67,12 +67,30 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         await Drain();Assert.Equal("confirmed",(await Service<OrderService>().GetAsync(order.Id,Ct)).State);
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"accepted","accept"),Ct);await Drain();
         var offer=Assert.Single(await Service<DispatchService>().OffersAsync(courier,Ct));
+        // An expired offer cannot assign a courier, even if the client still displays it.
+        await using(var expire=fixture.Source.CreateCommand("UPDATE dispatch.offers SET expires_at=now()-interval '1 second' WHERE id=@id"))
+        {expire.Parameters.AddWithValue("id",offer.Id);await expire.ExecuteNonQueryAsync();}
+        foreach(var accept in new[]{true,false})
+        {
+            var expired=await Assert.ThrowsAsync<ApiException>(()=>Service<DispatchService>().DecideOfferAsync(courier,offer.Id,accept,Ct));
+            Assert.Equal(409,expired.StatusCode);Assert.Equal("offer_expired",expired.Code);
+        }
+        Assert.Null(await Service<DispatchService>().AssignedAsync(order.Id,Ct));
+        await using(var renew=fixture.Source.CreateCommand("UPDATE dispatch.offers SET expires_at=now()+interval '2 minutes' WHERE id=@id"))
+        {renew.Parameters.AddWithValue("id",offer.Id);await renew.ExecuteNonQueryAsync();}
         await Service<DispatchService>().DecideOfferAsync(courier,offer.Id,true,Ct);await Drain();
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"preparing","prepare"),Ct);
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"ready","ready"),Ct);await Drain();
         await Service<DeliveryService>().ActionAsync(courier,order.Id,new(Guid.NewGuid(),"arrived",null,null,"arrived"),Ct);
         var pickup=(await Service<DeliveryService>().GetAsync(owner,order.Id,Ct)).PickupPin;
         Assert.Null((await Service<DeliveryService>().GetAsync(courier,order.Id,Ct)).PickupPin);
+        fixture.Client.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",courierSession.AccessToken);
+        var invalidPin=pickup=="000000"?"111111":"000000";
+        var invalidResponse=await fixture.Client.PostAsJsonAsync($"/api/v1/deliveries/{order.Id}/actions",new DeliveryAction(Guid.NewGuid(),"picked_up",invalidPin,null,"wrong pickup PIN"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity,invalidResponse.StatusCode);
+        Assert.Contains("invalid_delivery_pin",await invalidResponse.Content.ReadAsStringAsync());
+        Assert.Equal("arrived",(await Service<DeliveryService>().GetAsync(courier,order.Id,Ct)).State);
+        Assert.Equal(1,await fixture.CountAsync("SELECT sum(pickup_attempts) FROM deliveries.deliveries"));
         await Service<DeliveryService>().ActionAsync(courier,order.Id,new(Guid.NewGuid(),"picked_up",pickup,null,"pickup verified"),Ct);await Drain();
         await Assert.ThrowsAsync<ApiException>(()=>Service<Delivery.Api.OrderActions>().ExecuteAsync(owner,order.Id,new(Guid.NewGuid(),"cancelled","late cancellation"),Ct));
         await Service<DeliveryService>().ActionAsync(courier,order.Id,new(Guid.NewGuid(),"in_transit",null,null,"route"),Ct);await Drain();

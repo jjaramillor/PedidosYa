@@ -96,3 +96,16 @@ Los comprobantes `capture` y `delivery` tienen suma cero; el reparto suma S/64. 
 Evidencia: [ruta y GPS activo](android-en-ruta-2026-11-23.jpg), [entrega completada](android-entregado-2026-11-23.jpg), [ganancias](android-ganancias-2026-11-23.jpg).
 
 Entorno: emulador Android 13 en D, API Validation, PostgreSQL/PostGIS, Redis, Mailpit y pagos sandbox. La aprobación se limita al camino de entrega con PIN de este pedido. No cubre una nueva oferta, rechazo/vencimiento, pérdida de red, fotografía, segundo plano, dispositivo físico, iOS ni proveedores reales. No sustituye la aceptación completa de las 44 funcionalidades.
+
+## Excepciones y recuperación de conexión
+
+Validación automatizada del 23 de noviembre de 2026:
+
+- Las ofertas vencidas se rechazan en el servidor tanto al aceptar como al rechazar, sin asignar un repartidor. La interfaz elimina las ofertas vencidas sin recarga manual.
+- Un PIN de retiro incorrecto devuelve HTTP 422 y `invalid_delivery_pin`, conserva el estado `arrived` y consume un intento. Antes devolvía 401, que el cliente interpretaba como sesión caducada y podía reenviar tras renovar credenciales. El PIN correcto posterior permite continuar el recorrido.
+- La recuperación de sesión conserva la credencial ante desconexión o respuestas 429, 500 y 503. Solo una respuesta 401 definitiva elimina la credencial. La pantalla permite reintentar la sesión guardada sin solicitar otro OTP cuando vuelve la conexión.
+- Una acción cuya respuesta se pierde no se reenvía automáticamente. El botón «Actualizar estado de entrega» consulta el estado real para continuar; una prueba de interfaz simula que la llegada se confirmó en el servidor pero se perdió su respuesta.
+
+Resultados: análisis Flutter sin observaciones y 15 pruebas aprobadas; cuatro pruebas de integración MVP aprobadas contra PostGIS/Redis de Testcontainers. Estas últimas incluyen recorridos tarjeta/efectivo con oferta vencida y PIN incorrecto antes del cierre balanceado. Evidencia local: `TestResults/mvp-excepciones.trx`.
+
+Los fallos de red se simularon en el cliente HTTP y las pruebas de interfaz. Esta validación no equivale a desconectar físicamente un dispositivo ni a comprobar una pérdida de respuesta durante la rotación de un refresh token en el servidor. Continúan pendientes ese escenario, el bloqueo tras cinco PIN erróneos, las incidencias/devoluciones y la concurrencia entre roles.
