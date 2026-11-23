@@ -66,7 +66,7 @@ Supuestos actuales: PEN, horarios America/Lima, restaurantes y pedidos inmediato
 - Recorrido HTTP local aprobado con tarjeta sandbox y efectivo: registro OTP por Mailpit, aprobación de participantes, cotización, pedido, asignación, retiro con PIN, GPS sintético, entrega con PIN, cierre, valoración y registro ficticio de liquidación. Script reproducible: `scripts/verify-mvp-http.ps1`; resultado sin tokens: `.artifacts/validation/ultimo-recorrido-http.json`.
 - Se corrigió el trabajador Outbox para respetar `Messaging:RunWorker=false` en hosts de prueba; una regresión verifica que no compita con el despachador manual.
 - Angular: build de producción aprobado tras corregir el manejo de respuestas HTTP exitosas vacías. Persisten avisos CommonJS de Leaflet y Mercado Pago.
-- Flutter: análisis sin observaciones y cinco pruebas aprobadas (actualización del 23 de noviembre). JDK completo 19, SDK 36, Build Tools 35, Gradle 8.13, cachés y emulador Android 13 preparados en D. APK debug para emulador compilado e instalado; recorrido de reparto en validación. iOS requiere macOS y firma. Ver [preparación Android](android-local.md).
+- Flutter: análisis sin observaciones y cinco pruebas aprobadas (actualización del 23 de noviembre). JDK completo 19, SDK 36, Build Tools 35, Gradle 8.13, cachés y emulador Android 13 preparados en D. APK debug instalado; llegada, retiro y entrega con PIN, GPS sintético, ganancias y cierre sandbox comprobados el 23 de noviembre. iOS requiere macOS y firma. Ver [preparación Android](android-local.md).
 - Falta la aceptación funcional completa de las interfaces web y móviles, incluyendo operación simultánea por roles y dispositivos reales.
 - Falta validar la cuenta real de pagos, webhook HTTPS, SMTP y proveedor de mapas. No se hicieron cobros, devoluciones ni transferencias reales. Estos resultados no constituyen aprobación para producción.
 
@@ -86,7 +86,7 @@ flutter --no-version-check test
 Referencias de proveedores: [CardForm alojado](https://www.mercadopago.com.pe/developers/es/docs/checkout-api-payments/integration-configuration/card/integration-via-cardform), [webhooks](https://www.mercadopago.com.pe/developers/es/docs/links-and-debts/additional-content/your-integrations/notifications/webhooks), [política de tiles OSM](https://operations.osmfoundation.org/policies/tiles/), [AGP 8.13](https://developer.android.com/build/releases/agp-8-13-0-release-notes).
 
 
-Aceptación web de cliente y comercio ejecutada el 4 de noviembre de 2026: [recorrido y evidencia](aceptacion-web-cliente-comercio.md). Pedido DEMO listo para recoger; continúa pendiente la fase móvil de reparto.
+Aceptación web de cliente y comercio ejecutada el 4 de noviembre de 2026: [recorrido y evidencia](aceptacion-web-cliente-comercio.md). Pedido DEMO entregado desde Android y cerrado el 23 de noviembre: ver [aceptación Android y cierre](android-local.md). Siguen pendientes excepciones y aceptación integral de los canales.
 
 
 

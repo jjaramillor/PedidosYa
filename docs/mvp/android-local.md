@@ -49,7 +49,7 @@ API desde emulador: `http://10.0.2.2:8080`; web: `http://10.0.2.2:4200`. HTTP es
 
 Pedido preparado: `e24d9414-268a-4c9b-b836-a1f45e06507d`, Fogón de Lince DEMO, S/ 64.
 
-Pendiente: completar en la app el ingreso OTP, disponibilidad, oferta, retiro con PIN, ruta y entrega con PIN; verificar seguimiento y cierre financiero desde el cliente. No se debe considerar aprobada esta fase por el solo hecho de generar el APK.
+El 23 de noviembre se completaron en el emulador la llegada, retiro con PIN, inicio de ruta, GPS y entrega con PIN; el cliente web confirmó el pedido completado y registró su valoración. La sesión y la asignación se recuperaron de la prueba iniciada anteriormente. Los resultados y límites se detallan al final de esta guía.
 
 Se usarán únicamente cuentas y ubicaciones ficticias, correo en Mailpit y pagos sandbox. La configuración de publicación, firma propia, pruebas en dispositivos físicos e iOS siguen pendientes.
 
@@ -64,3 +64,35 @@ Se permite inyectar el cliente API de CourierHome para verificar la interfaz sin
 APK debug de emulador recompilado con éxito (158 tareas Gradle): `.artifacts/mobile/Delivery-emulator-debug-2026-11-23.apk`. SHA-256: `d66648802f3669f02f269d2a478abab1e8c863d5e6d9254b3c22a3fade1ce5de`. Log local: `D:/Development/PedidosYa/temp/mvp-courier-build.log`. El binario permanece fuera de Git.
 
 La aceptación integral nativa de retiro, ruta, GPS, entrega y cierre financiero permanece pendiente. No se instaló ni se probó esta nueva compilación en el emulador durante este avance. Continúan pendientes la firma de distribución, el dispositivo físico e iOS.
+
+
+## Aceptación Android y cierre del pedido 23 de noviembre de 2026
+
+Resultado: pedido `e24d9414-268a-4c9b-b836-a1f45e06507d`, Fogón de Lince DEMO, entregado desde la aplicación Android y cerrado por el backend. Se instaló el APK actualizado del 23 de noviembre conservando la sesión y la asignación anteriores.
+
+Recorrido ejecutado desde la interfaz nativa:
+
+1. Recuperación de sesión y apertura del pedido asignado.
+2. Llegada al restaurante con observación: `assigned` a `arrived`.
+3. Retiro con PIN: `arrived` a `picked_up`.
+4. Inicio de ruta: `picked_up` a `in_transit`.
+5. Activación de ubicación con coordenadas sintéticas del emulador: cuatro posiciones persistidas. Al entregar desapareció el control de seguimiento y el número de posiciones permaneció en cuatro durante las comprobaciones posteriores.
+6. Entrega con PIN del cliente: `in_transit` a `delivered`; el pedido pasó a `closed`.
+7. Consulta de ganancias en la app: movimiento de entrega de S/4. El saldo global de la cuenta ficticia es S/-15,44 porque también contiene efectivo pendiente de rendición de pruebas anteriores; no representa una pérdida de esta entrega.
+
+El cliente ingresó en la web mediante OTP de Mailpit, abrió el pedido marcado «Completado» y guardó una valoración de cinco estrellas para restaurante y repartidor con un comentario de prueba. El seguimiento web se comprobó después de entregar; esta ejecución no verifica animación del mapa ni propagación simultánea en vivo entre roles.
+
+Comprobaciones financieras de solo lectura:
+
+| Concepto | Importe PEN |
+|---|---:|
+| Total capturado en sandbox | 64,00 |
+| Comercio | 49,30 |
+| Repartidor | 4,00 |
+| Plataforma | 10,70 |
+
+Los comprobantes `capture` y `delivery` tienen suma cero; el reparto suma S/64. No se ejecutaron transferencias bancarias ni se marcaron liquidaciones pagadas durante este recorrido. Los PIN se consultaron mediante las API autorizadas del comercio y del cliente; no se editaron tablas para avanzar los estados.
+
+Evidencia: [ruta y GPS activo](android-en-ruta-2026-11-23.jpg), [entrega completada](android-entregado-2026-11-23.jpg), [ganancias](android-ganancias-2026-11-23.jpg).
+
+Entorno: emulador Android 13 en D, API Validation, PostgreSQL/PostGIS, Redis, Mailpit y pagos sandbox. La aprobación se limita al camino de entrega con PIN de este pedido. No cubre una nueva oferta, rechazo/vencimiento, pérdida de red, fotografía, segundo plano, dispositivo físico, iOS ni proveedores reales. No sustituye la aceptación completa de las 44 funcionalidades.

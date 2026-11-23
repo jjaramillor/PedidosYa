@@ -30,3 +30,10 @@ Evidencias:
 Alcance pendiente: retiro y entrega por repartidor desde móvil, valoración y cierre financiero de este pedido; prueba de dos sesiones simultáneas en navegadores aislados y actualización en vivo entre roles. Este pedido queda listo para continuar esa fase, sin repartidor activo asignado. El recorrido no constituye aceptación de todas las HU ni validación de producción.
 
 Servicios de revisión: web http://127.0.0.1:4200, API http://localhost:8080 y Mailpit http://localhost:8025. Se reiniciaron los servicios locales que estaban apagados; se conservaron los datos de validación.
+
+
+## Continuación del 23 de noviembre de 2026
+
+El pedido de este recorrido se retomó desde el emulador Android: llegada, retiro con PIN, ruta, GPS sintético y entrega con PIN. El backend cerró el pedido y capturó S/64 en sandbox. El cliente ingresó nuevamente por OTP, verificó «Completado» en listado y detalle y guardó la valoración. El repartidor consultó su ganancia de S/4. Ver [evidencia Android y cierre financiero](android-local.md).
+
+Esta continuación resuelve retiro, entrega, valoración y registro financiero de este pedido. La liquidación bancaria, la visualización simultánea en vivo y la aceptación de excepciones permanecen pendientes.
