@@ -1,6 +1,6 @@
 # Trazabilidad de las 44 funcionalidades MVP
 
-La tabla relaciona la implementación inicial con la sección 7. **Todas las filas tienen validación integral pendiente**: Docker no permite iniciar PostGIS/Redis y los clientes aún no han recorrido el flujo real completo. Una ruta o pantalla implementada no equivale a aceptación funcional.
+La tabla relaciona la implementación inicial con la sección 7. **La aceptación integral por funcionalidad sigue pendiente**. Docker ya está operativo; existen pruebas de integración y un recorrido HTTP aprobado, además de aceptación parcial de cliente y comercio web. Consultar [estado documentado](README.md) y [revisión de alcance](revision-alcance.md). Una ruta o pantalla implementada no equivale a aceptación funcional.
 
 Los contratos de API listados usan el prefijo `/api/v1`, salvo el hub de SignalR y los eventos. La matriz original permanece en `matriz-original.json`.
 
@@ -50,4 +50,3 @@ Los contratos de API listados usan el prefijo `/api/v1`, salvo el hub de SignalR
 | ADM-006 | Casos, SLA y evidencias | Support | `support/cases; support/cases/{id}; support/cases/{id}/notes` | Web/móvil apertura; web administración atención y evidencia |
 | ADM-007 | Parámetros y feature flags | Configuration | `admin/parameters` | Web flags; parámetros adicionales por API |
 | ADM-008 | Auditoría | Configuration, Identity | `admin/audit; identity/admin/audit` | Web y API; razones, actor, correlación |
-

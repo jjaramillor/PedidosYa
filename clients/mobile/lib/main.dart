@@ -22,15 +22,18 @@ class DeliveryApp extends StatelessWidget {
 }
 
 class CourierHome extends StatefulWidget {
-  const CourierHome({super.key});
+  const CourierHome({super.key, this.api});
+  final DeliveryApi? api;
   @override
   State<CourierHome> createState() => _CourierHomeState();
 }
 
 class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
-  final api = DeliveryApi(
-      baseUrl: const String.fromEnvironment('API_URL',
-          defaultValue: 'https://localhost:8080'));
+  late final api = widget.api ??
+      DeliveryApi(
+          baseUrl: const String.fromEnvironment('API_URL',
+              defaultValue: 'https://localhost:8080'));
+  final scroll = ScrollController();
   final email = TextEditingController();
   final code = TextEditingController();
   final pin = TextEditingController();
@@ -96,6 +99,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
     gps?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     api.dispose();
+    scroll.dispose();
     email.dispose();
     code.dispose();
     pin.dispose();
@@ -219,9 +223,12 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       trackedOrder = null;
       evidence = null;
       cashCollected = false;
+      pin.clear();
+      reason.clear();
     }
     order = Map<String, dynamic>.from(await api.call('/orders/$id'));
     fulfillment = Map<String, dynamic>.from(await api.call('/deliveries/$id'));
+    if (scroll.hasClients) scroll.jumpTo(0);
   }
 
   Future<void> act(String state) async {
@@ -333,247 +340,283 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                         }
                       }))
       ]),
-      body: ListView(padding: const EdgeInsets.all(24), children: [
-        if (busy) const LinearProgressIndicator(),
-        if (error != null)
-          Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(error!,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error))),
-        if (!authenticated) ...[
-          const Text('Ingresa con el código de tu correo',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          TextField(
-              controller: email,
-              decoration: const InputDecoration(labelText: 'Correo'),
-              keyboardType: TextInputType.emailAddress),
-          if (registering && challenge == null) ...[
-            TextField(
-                controller: displayName,
-                decoration: const InputDecoration(labelText: 'Nombre visible')),
-            CheckboxListTile(
-                title: const Text(
-                    'Acepto los términos y la política de privacidad'),
-                value: acceptedPolicies,
-                onChanged: busy
-                    ? null
-                    : (value) =>
-                        setState(() => acceptedPolicies = value == true))
-          ],
-          if (challenge == null)
-            TextButton(
-                onPressed: busy
-                    ? null
-                    : () => setState(() => registering = !registering),
-                child:
-                    Text(registering ? 'Ya tengo cuenta' : 'Crear una cuenta')),
-          if (challenge == null)
-            FilledButton(
-                onPressed: busy ? null : () => run(login),
-                child: const Text('Enviar código'))
-          else ...[
-            TextField(
-                controller: code,
-                decoration: const InputDecoration(labelText: 'Código OTP'),
-                keyboardType: TextInputType.number,
-                maxLength: 6),
-            FilledButton(
-                onPressed: busy ? null : () => run(verify),
-                child: const Text('Confirmar'))
-          ]
-        ],
-        if (authenticated) ...[
-          FilledButton(
-              onPressed: busy
-                  ? null
-                  : () {
-                      gps?.cancel();
-                      gps = null;
-                      trackedOrder = null;
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => CustomerArea(api: api)));
-                    },
-              child: const Text('Pedir comida como cliente')),
-          ExpansionTile(title: const Text('Solicitud de alta'), children: [
-            DropdownButton<String>(
-                value: vehicle,
-                items: const [
-                  DropdownMenuItem(value: 'bicycle', child: Text('Bicicleta')),
-                  DropdownMenuItem(value: 'motorbike', child: Text('Moto')),
-                  DropdownMenuItem(value: 'car', child: Text('Auto'))
+      body: ListView(
+          controller: scroll,
+          padding: const EdgeInsets.all(24),
+          children: [
+            if (busy) const LinearProgressIndicator(),
+            if (error != null)
+              Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error))),
+            if (!authenticated) ...[
+              const Text('Ingresa con el código de tu correo',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              TextField(
+                  controller: email,
+                  decoration: const InputDecoration(labelText: 'Correo'),
+                  keyboardType: TextInputType.emailAddress),
+              if (registering && challenge == null) ...[
+                TextField(
+                    controller: displayName,
+                    decoration:
+                        const InputDecoration(labelText: 'Nombre visible')),
+                CheckboxListTile(
+                    title: const Text(
+                        'Acepto los términos y la política de privacidad'),
+                    value: acceptedPolicies,
+                    onChanged: busy
+                        ? null
+                        : (value) =>
+                            setState(() => acceptedPolicies = value == true))
+              ],
+              if (challenge == null)
+                TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => setState(() => registering = !registering),
+                    child: Text(
+                        registering ? 'Ya tengo cuenta' : 'Crear una cuenta')),
+              if (challenge == null)
+                FilledButton(
+                    onPressed: busy ? null : () => run(login),
+                    child: const Text('Enviar código'))
+              else ...[
+                TextField(
+                    controller: code,
+                    decoration: const InputDecoration(labelText: 'Código OTP'),
+                    keyboardType: TextInputType.number,
+                    maxLength: 6),
+                FilledButton(
+                    onPressed: busy ? null : () => run(verify),
+                    child: const Text('Confirmar'))
+              ]
+            ],
+            if (authenticated) ...[
+              if (order == null) ...[
+                FilledButton(
+                    onPressed: busy
+                        ? null
+                        : () {
+                            gps?.cancel();
+                            gps = null;
+                            trackedOrder = null;
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => CustomerArea(api: api)));
+                          },
+                    child: const Text('Pedir comida como cliente')),
+                ExpansionTile(
+                    title: const Text('Solicitud de alta'),
+                    children: [
+                      DropdownButton<String>(
+                          value: vehicle,
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'bicycle', child: Text('Bicicleta')),
+                            DropdownMenuItem(
+                                value: 'motorbike', child: Text('Moto')),
+                            DropdownMenuItem(value: 'car', child: Text('Auto'))
+                          ],
+                          onChanged: (value) =>
+                              setState(() => vehicle = value!)),
+                      OutlinedButton(
+                          onPressed: busy
+                              ? null
+                              : () => run(() async {
+                                    final id =
+                                        await photograph(ImageSource.gallery);
+                                    if (id != null) documents.add(id);
+                                  }),
+                          child:
+                              Text('Adjuntar documento (${documents.length})')),
+                      FilledButton(
+                          onPressed: busy || documents.isEmpty
+                              ? null
+                              : () => run(apply),
+                          child: const Text('Enviar solicitud'))
+                    ]),
+                OutlinedButton(
+                    onPressed: busy ? null : () => run(report),
+                    child: const Text('Ver ganancias y liquidaciones')),
+                if (earnings != null) ...[
+                  Text(
+                      'Saldo pendiente: S/ ${(earnings['pending'] / 100).toStringAsFixed(2)}'),
+                  for (final movement in earnings['movements'])
+                    ListTile(
+                        title: Text(movement['kind'] == 'incentive'
+                            ? 'Incentivo'
+                            : movement['kind'] == 'delivery'
+                                ? 'Ganancia de entrega'
+                                : movement['kind'] == 'capture'
+                                    ? 'Efectivo recibido para rendir'
+                                    : 'Ajuste financiero'),
+                        subtitle: Text(movement['at']),
+                        trailing: Text(
+                            'S/ ${(movement['amount'] / 100).toStringAsFixed(2)}')),
+                  for (final settlement in earnings['settlements'])
+                    ListTile(
+                        title: Text(
+                            'Liquidación: S/ ${(settlement['amount'] / 100).toStringAsFixed(2)}'),
+                        subtitle: Text(settlement['paidAt'] == null
+                            ? 'Pendiente de pago'
+                            : 'Pagada'))
                 ],
-                onChanged: (value) => setState(() => vehicle = value!)),
-            OutlinedButton(
-                onPressed: busy
-                    ? null
-                    : () => run(() async {
-                          final id = await photograph(ImageSource.gallery);
-                          if (id != null) documents.add(id);
-                        }),
-                child: Text('Adjuntar documento (${documents.length})')),
-            FilledButton(
-                onPressed: busy || documents.isEmpty ? null : () => run(apply),
-                child: const Text('Enviar solicitud'))
-          ]),
-          OutlinedButton(
-              onPressed: busy ? null : () => run(report),
-              child: const Text('Ver ganancias y liquidaciones')),
-          if (earnings != null) ...[
-            Text(
-                'Saldo pendiente: S/ ${(earnings['pending'] / 100).toStringAsFixed(2)}'),
-            for (final movement in earnings['movements'])
-              ListTile(
-                  title: Text(movement['kind'] == 'incentive'
-                      ? 'Incentivo'
-                      : movement['kind'] == 'delivery'
-                          ? 'Ganancia de entrega'
-                          : movement['kind'] == 'capture'
-                              ? 'Efectivo recibido para rendir'
-                              : 'Ajuste financiero'),
-                  subtitle: Text(movement['at']),
-                  trailing: Text(
-                      'S/ ${(movement['amount'] / 100).toStringAsFixed(2)}')),
-            for (final settlement in earnings['settlements'])
-              ListTile(
-                  title: Text(
-                      'Liquidación: S/ ${(settlement['amount'] / 100).toStringAsFixed(2)}'),
-                  subtitle: Text(settlement['paidAt'] == null
-                      ? 'Pendiente de pago'
-                      : 'Pagada'))
-          ],
-          FilledButton(
-              onPressed: busy ? null : () => run(availability),
-              child: Text(available
-                  ? 'Dejar de recibir ofertas'
-                  : 'Disponible para pedidos')),
-          OutlinedButton(
-              onPressed: busy ? null : () => run(reload),
-              child: const Text('Actualizar ofertas y entregas')),
-          const SizedBox(height: 20),
-          const Text('Ofertas',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          for (final offer in offers)
-            Card(
-                child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Oferta disponible hasta ${offer['expiresAt']}'),
-                          Row(children: [
-                            TextButton(
-                                onPressed: busy
-                                    ? null
-                                    : () => run(() async {
-                                          await api.call(
-                                              '/couriers/offers/${offer['id']}/decision',
-                                              method: 'POST',
-                                              body: {'accept': true});
-                                          await reload();
-                                        }),
-                                child: const Text('Aceptar')),
-                            TextButton(
-                                onPressed: busy
-                                    ? null
-                                    : () => run(() async {
-                                          await api.call(
-                                              '/couriers/offers/${offer['id']}/decision',
-                                              method: 'POST',
-                                              body: {'accept': false});
-                                          await reload();
-                                        }),
-                                child: const Text('Rechazar'))
-                          ])
-                        ]))),
-          const Text('Mis entregas',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          for (final item in deliveries)
-            ListTile(
-                title: const Text('Entrega asignada'),
-                subtitle: const Text('Ver estado y dirección'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: busy ? null : () => run(() => open(item as String))),
-          if (order != null && fulfillment != null) ...[
-            const Divider(),
-            Text(order!['quote']['branch']['name'],
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            Text('Destino: ${order!['quote']['address']['street']}'),
-            Text('Estado: ${fulfillment!['state']}'),
-            OutlinedButton(
-                onPressed: busy ? null : () => run(navigate),
-                child: const Text('Abrir navegación')),
-            TextField(
-                controller: reason,
-                decoration:
-                    const InputDecoration(labelText: 'Motivo / observación')),
-            TextField(
-                controller: pin,
-                decoration: const InputDecoration(
-                    labelText: 'Código de retiro o entrega'),
-                keyboardType: TextInputType.number,
-                maxLength: 6),
-            if (['in_transit', 'incident'].contains(fulfillment!['state']))
-              OutlinedButton(
-                  onPressed: busy
-                      ? null
-                      : () => run(() async {
-                            evidence = await photograph(ImageSource.camera);
-                          }),
-                  child: Text(evidence == null
-                      ? 'Adjuntar fotografía de entrega'
-                      : 'Fotografía adjunta')),
-            if (order!['method'] == 'cash' &&
-                ['in_transit', 'incident'].contains(fulfillment!['state']))
-              CheckboxListTile(
-                  title: Text(
-                      'Recibí S/ ${(order!['quote']['total'] / 100).toStringAsFixed(2)} en efectivo'),
-                  value: cashCollected,
-                  onChanged: busy
-                      ? null
-                      : (value) =>
-                          setState(() => cashCollected = value == true)),
-            for (final action in switch (fulfillment!['state']) {
-              'assigned' => ['arrived'],
-              'arrived' => ['picked_up'],
-              'picked_up' => ['in_transit'],
-              'in_transit' => ['delivered', 'incident'],
-              'incident' => ['in_transit', 'delivered', 'returned'],
-              _ => <String>[]
-            })
-              FilledButton(
-                  onPressed: busy ? null : () => run(() => act(action)),
-                  child: Text({
-                    'arrived': 'Llegué al restaurante',
-                    'picked_up': 'Confirmar retiro',
-                    'in_transit': 'Iniciar ruta',
-                    'delivered': 'Confirmar entrega',
-                    'incident': 'Reportar incidencia',
-                    'returned': 'Confirmar devolución'
-                  }[action]!)),
-            if (['assigned', 'arrived', 'picked_up', 'in_transit', 'incident']
-                .contains(fulfillment!['state']))
-              OutlinedButton(
-                  onPressed: busy
-                      ? null
-                      : () => run(() async {
-                            if (gps != null) {
-                              gps?.cancel();
-                              gps = null;
-                              trackedOrder = null;
-                            } else {
-                              await startTracking();
-                            }
-                          }),
-                  child: Text(gps == null
-                      ? 'Compartir ubicación durante esta entrega'
-                      : 'Detener ubicación')),
-            const Text(
-                'La ubicación se comparte solo con la app abierta y durante una entrega activa.')
-          ]
-        ]
-      ]));
+                FilledButton(
+                    onPressed: busy ? null : () => run(availability),
+                    child: Text(available
+                        ? 'Dejar de recibir ofertas'
+                        : 'Disponible para pedidos')),
+                OutlinedButton(
+                    onPressed: busy ? null : () => run(reload),
+                    child: const Text('Actualizar ofertas y entregas')),
+                const SizedBox(height: 20),
+                const Text('Ofertas',
+                    style:
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                for (final offer in offers)
+                  Card(
+                      child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Pedido ${offer['orderId']}'),
+                                Text(
+                                    'Oferta disponible hasta ${offer['expiresAt']}'),
+                                Row(children: [
+                                  TextButton(
+                                      onPressed: busy
+                                          ? null
+                                          : () => run(() async {
+                                                await api.call(
+                                                    '/couriers/offers/${offer['id']}/decision',
+                                                    method: 'POST',
+                                                    body: {'accept': true});
+                                                await reload();
+                                              }),
+                                      child: const Text('Aceptar')),
+                                  TextButton(
+                                      onPressed: busy
+                                          ? null
+                                          : () => run(() async {
+                                                await api.call(
+                                                    '/couriers/offers/${offer['id']}/decision',
+                                                    method: 'POST',
+                                                    body: {'accept': false});
+                                                await reload();
+                                              }),
+                                      child: const Text('Rechazar'))
+                                ])
+                              ]))),
+                const Text('Mis entregas',
+                    style:
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                for (final item in deliveries)
+                  ListTile(
+                      title: Text('Pedido $item'),
+                      subtitle: const Text('Ver estado y dirección'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap:
+                          busy ? null : () => run(() => open(item as String))),
+              ],
+              if (order != null && fulfillment != null) ...[
+                OutlinedButton.icon(
+                    onPressed: busy
+                        ? null
+                        : () => setState(() {
+                              order = null;
+                              fulfillment = null;
+                              error = null;
+                              if (scroll.hasClients) scroll.jumpTo(0);
+                            }),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Volver a ofertas y entregas')),
+                Text('Pedido ${order!['id']}'),
+                Text(order!['quote']['branch']['name'],
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.bold)),
+                Text('Destino: ${order!['quote']['address']['street']}'),
+                Text('Estado: ${fulfillment!['state']}'),
+                OutlinedButton(
+                    onPressed: busy ? null : () => run(navigate),
+                    child: const Text('Abrir navegación')),
+                TextField(
+                    controller: reason,
+                    decoration: const InputDecoration(
+                        labelText: 'Motivo / observación')),
+                TextField(
+                    controller: pin,
+                    decoration: const InputDecoration(
+                        labelText: 'Código de retiro o entrega'),
+                    keyboardType: TextInputType.number,
+                    maxLength: 6),
+                if (['in_transit', 'incident'].contains(fulfillment!['state']))
+                  OutlinedButton(
+                      onPressed: busy
+                          ? null
+                          : () => run(() async {
+                                evidence = await photograph(ImageSource.camera);
+                              }),
+                      child: Text(evidence == null
+                          ? 'Adjuntar fotografía de entrega'
+                          : 'Fotografía adjunta')),
+                if (order!['method'] == 'cash' &&
+                    ['in_transit', 'incident'].contains(fulfillment!['state']))
+                  CheckboxListTile(
+                      title: Text(
+                          'Recibí S/ ${(order!['quote']['total'] / 100).toStringAsFixed(2)} en efectivo'),
+                      value: cashCollected,
+                      onChanged: busy
+                          ? null
+                          : (value) =>
+                              setState(() => cashCollected = value == true)),
+                for (final action in switch (fulfillment!['state']) {
+                  'assigned' => ['arrived'],
+                  'arrived' => ['picked_up'],
+                  'picked_up' => ['in_transit'],
+                  'in_transit' => ['delivered', 'incident'],
+                  'incident' => ['in_transit', 'delivered', 'returned'],
+                  _ => <String>[]
+                })
+                  FilledButton(
+                      onPressed: busy ? null : () => run(() => act(action)),
+                      child: Text({
+                        'arrived': 'Llegué al restaurante',
+                        'picked_up': 'Confirmar retiro',
+                        'in_transit': 'Iniciar ruta',
+                        'delivered': 'Confirmar entrega',
+                        'incident': 'Reportar incidencia',
+                        'returned': 'Confirmar devolución'
+                      }[action]!)),
+                if ([
+                  'assigned',
+                  'arrived',
+                  'picked_up',
+                  'in_transit',
+                  'incident'
+                ].contains(fulfillment!['state']))
+                  OutlinedButton(
+                      onPressed: busy
+                          ? null
+                          : () => run(() async {
+                                if (gps != null) {
+                                  gps?.cancel();
+                                  gps = null;
+                                  trackedOrder = null;
+                                } else {
+                                  await startTracking();
+                                }
+                              }),
+                      child: Text(gps == null
+                          ? 'Compartir ubicación durante esta entrega'
+                          : 'Detener ubicación')),
+                const Text(
+                    'La ubicación se comparte solo con la app abierta y durante una entrega activa.')
+              ]
+            ]
+          ]));
 }

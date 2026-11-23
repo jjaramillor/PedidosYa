@@ -54,3 +54,13 @@ Pendiente: completar en la app el ingreso OTP, disponibilidad, oferta, retiro co
 Se usarán únicamente cuentas y ubicaciones ficticias, correo en Mailpit y pagos sandbox. La configuración de publicación, firma propia, pruebas en dispositivos físicos e iOS siguen pendientes.
 
 Fuentes: [SDK Manager](https://developer.android.com/tools/sdkmanager), [Android en Flutter](https://docs.flutter.dev/platform-integration/android/setup), [resolución de dependencias Gradle](https://docs.gradle.org/current/userguide/resolution_rules.html).
+
+## Avance de interfaz — 23 de noviembre de 2026
+
+El detalle de entrega se muestra separado de ofertas e historial, con regreso explícito a la lista y desplazamiento inicial al comienzo. Las ofertas y las entregas muestran el identificador del pedido. Este identificador permite distinguirlas, pero todavía no sustituye el resumen comercial deseable en una oferta (restaurante, distancia y ganancia).
+
+Se permite inyectar el cliente API de CourierHome para verificar la interfaz sin red. Cinco pruebas Flutter aprobadas: acceso sin sesión, tres reglas de ofertas y apertura de entrega, motivo obligatorio, transición de llegada contra API simulada y regreso a la lista. Análisis Flutter sin observaciones. Esto no acredita una entrega real ni una prueba de integración con el backend.
+
+APK debug de emulador recompilado con éxito (158 tareas Gradle): `.artifacts/mobile/Delivery-emulator-debug-2026-11-23.apk`. SHA-256: `d66648802f3669f02f269d2a478abab1e8c863d5e6d9254b3c22a3fade1ce5de`. Log local: `D:/Development/PedidosYa/temp/mvp-courier-build.log`. El binario permanece fuera de Git.
+
+La aceptación integral nativa de retiro, ruta, GPS, entrega y cierre financiero permanece pendiente. No se instaló ni se probó esta nueva compilación en el emulador durante este avance. Continúan pendientes la firma de distribución, el dispositivo físico e iOS.
