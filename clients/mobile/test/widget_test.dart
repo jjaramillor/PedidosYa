@@ -44,6 +44,9 @@ void main() {
     expect(find.text('Confirmar retiro'), findsOneWidget);
     await tester.tap(find.text('Volver a ofertas y entregas'));
     await tester.pumpAndSettle();
+    expect(find.text('Solicitud de alta'), findsNothing);
+    await tester.tap(find.text('Perfil'));
+    await tester.pumpAndSettle();
     expect(find.text('Solicitud de alta'), findsOneWidget);
     expect(find.text('Llegué al restaurante'), findsNothing);
   });
@@ -176,7 +179,7 @@ void main() {
     api.pending.completeError(
         DeliveryApiException(409, 'El seguimiento no está activo.'));
     await tester.pumpAndSettle();
-    expect(find.text('Estado: delivered'), findsOneWidget);
+    expect(find.text('Estado: Entregado'), findsOneWidget);
     expect(find.textContaining('El seguimiento no está activo'), findsNothing);
     await tester.pump(const Duration(seconds: 21));
     expect(api.locations, 2);

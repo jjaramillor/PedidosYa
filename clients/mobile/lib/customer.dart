@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import 'api.dart';
+import 'presentation.dart';
 
 class CustomerArea extends StatefulWidget {
   const CustomerArea({super.key, required this.api});
@@ -15,6 +16,7 @@ class CustomerArea extends StatefulWidget {
 class _CustomerAreaState extends State<CustomerArea>
     with WidgetsBindingObserver {
   bool busy = false;
+  int destination = 0;
   String? error;
   String? addressId;
   double latitude = -12.0464, longitude = -77.0428;
@@ -213,6 +215,13 @@ class _CustomerAreaState extends State<CustomerArea>
     quote = null;
     checkoutId = null;
     await saveCart();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Añadido a tu carrito'),
+          action: SnackBarAction(
+              label: 'Ver carrito',
+              onPressed: () => setState(() => destination = 1))));
+    }
   }
 
   List<Map<String, dynamic>> lines() => cart
@@ -261,6 +270,7 @@ class _CustomerAreaState extends State<CustomerArea>
     quote = null;
     orders = await widget.api.call('/orders');
     await openOrder(placed['id']);
+    destination = 2;
   }
 
   Future<void> webCheckout() async {
@@ -337,162 +347,218 @@ class _CustomerAreaState extends State<CustomerArea>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Pedir comida')),
-      body: ListView(padding: const EdgeInsets.all(24), children: [
-        if (busy) const LinearProgressIndicator(),
-        if (error != null)
-          Text(error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error)),
-        DropdownButton<String>(
-            isExpanded: true,
-            value:
-                addresses.any((a) => a['id'] == addressId) ? addressId : null,
-            hint: const Text('Dirección de entrega'),
-            items: [
-              for (final item in addresses)
-                DropdownMenuItem(
-                    value: item['id'] as String,
-                    child: Text('${item['label']} · ${item['street']}'))
-            ],
-            onChanged: busy
-                ? null
-                : (value) {
-                    setState(() {
-                      addressId = value;
-                      quote = null;
-                    });
-                    run(browse);
-                  }),
-        OutlinedButton(
-            onPressed: busy ? null : () => run(address),
-            child: const Text('Añadir dirección con mi ubicación')),
-        TextField(
-            controller: search,
-            decoration:
-                const InputDecoration(labelText: 'Restaurante o producto')),
-        FilledButton(
-            onPressed: busy ? null : () => run(browse),
-            child: const Text('Buscar restaurantes')),
-        for (final item in branches)
-          Card(
-              child: ListTile(
-                  title: Text(item['branch']['name']),
-                  subtitle:
-                      Text('${item['etaMinutes']} min · ★ ${item['rating']}'),
-                  onTap: busy
-                      ? null
-                      : () => run(() => openBranch(item['branch'])))),
-        if (branch != null) ...[
-          Text(branch['name'],
-              style:
-                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          for (final product in products)
-            Card(
-                child: ListTile(
-                    title: Text(product['name']),
-                    subtitle: Text(
-                        '${product['description']} · ${money(product['price'])}'),
-                    trailing: IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: busy ||
-                                !product['available'] ||
-                                product['stock'] == 0
-                            ? null
-                            : () => run(() => add(product)))))
-        ],
-        if (cart.isNotEmpty) ...[
-          const Divider(),
-          const Text('Tu carrito',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          for (var i = 0; i < cart.length; i++)
-            ListTile(
-                title: Text('${cart[i]['quantity']} × ${cart[i]['name']}'),
-                trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: busy
-                        ? null
-                        : () => run(() async {
-                              final branchId = cart[i]['branchId'];
-                              cart.removeAt(i);
-                              quote = null;
-                              await widget.api.call('/cart',
-                                  method: 'PUT',
-                                  body: {
-                                    'branchId': branchId,
-                                    'lines': lines()
-                                  });
-                            }))),
-          TextField(
-              controller: coupon,
-              decoration: const InputDecoration(labelText: 'Cupón'),
-              onChanged: (_) => setState(() => quote = null)),
-          TextField(
-              controller: tip,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Propina (S/)'),
-              onChanged: (_) => setState(() => quote = null)),
-          OutlinedButton(
-              onPressed: busy ? null : () => run(calculate),
-              child: const Text('Calcular total')),
-          if (quote != null) ...[
-            Text('Productos: ${money(quote['subtotal'])}'),
-            Text(
-                'Entrega: ${money(quote['delivery'])} · Servicio: ${money(quote['service'])}'),
-            Text(
-                'Descuento: ${money(quote['discount'])} · Propina: ${money(quote['tip'])}'),
-            Text('Total: ${money(quote['total'])}',
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            DropdownButton<String>(
-                value: method,
-                items: [
-                  const DropdownMenuItem(
-                      value: 'cash',
-                      child: Text('Efectivo (si está habilitado)')),
-                  if (settings?['provider'] == 'sandbox')
-                    const DropdownMenuItem(
-                        value: 'card',
-                        child: Text('Tarjeta de prueba, sin cobro real'))
+      appBar: AppBar(title: const Text('delivery · a tu gusto')),
+      bottomNavigationBar: NavigationBar(
+          selectedIndex: destination,
+          onDestinationSelected:
+              busy ? null : (value) => setState(() => destination = value),
+          destinations: const [
+            NavigationDestination(
+                icon: Icon(Icons.restaurant_outlined), label: 'Explorar'),
+            NavigationDestination(
+                icon: Icon(Icons.shopping_bag_outlined), label: 'Carrito'),
+            NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined), label: 'Pedidos')
+          ]),
+      body: SafeArea(
+          top: false,
+          child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              children: [
+                if (busy) const LinearProgressIndicator(),
+                if (error != null)
+                  Text(error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+                if (destination == 0) ...[
+                  const IntroPanel(
+                      eyebrow: 'A TU GUSTO. A TU PUERTA.',
+                      title: 'Hoy se come rico.',
+                      description:
+                          'Explora los restaurantes de tu zona y encuentra tu próximo favorito.'),
+                  const SectionTitle('Tu dirección de entrega'),
+                  DropdownButton<String>(
+                      isExpanded: true,
+                      value: addresses.any((a) => a['id'] == addressId)
+                          ? addressId
+                          : null,
+                      hint: const Text('Dirección de entrega'),
+                      items: [
+                        for (final item in addresses)
+                          DropdownMenuItem(
+                              value: item['id'] as String,
+                              child:
+                                  Text('${item['label']} · ${item['street']}'))
+                      ],
+                      onChanged: busy
+                          ? null
+                          : (value) {
+                              setState(() {
+                                addressId = value;
+                                quote = null;
+                              });
+                              run(browse);
+                            }),
+                  OutlinedButton(
+                      onPressed: busy ? null : () => run(address),
+                      child: const Text('Añadir dirección con mi ubicación')),
+                  TextField(
+                      controller: search,
+                      decoration: const InputDecoration(
+                          labelText: 'Restaurante o producto')),
+                  FilledButton(
+                      onPressed: busy ? null : () => run(browse),
+                      child: const Text('Buscar restaurantes')),
+                  const SectionTitle('¿Qué se te antoja?'),
+                  if (!busy && branches.isEmpty)
+                    const Text(
+                        'No encontramos restaurantes. Prueba otra búsqueda o dirección.'),
+                  for (final item in branches)
+                    Card(
+                        child: ListTile(
+                            leading: const CircleAvatar(
+                                backgroundColor: Color(0xffeeeee3),
+                                child:
+                                    Icon(Icons.restaurant_rounded, color: ink)),
+                            trailing: const Icon(Icons.arrow_forward_rounded),
+                            title: Text(item['branch']['name']),
+                            subtitle: Text(
+                                '${item['etaMinutes']} min · ★ ${item['rating']}'),
+                            onTap: busy
+                                ? null
+                                : () => run(() => openBranch(item['branch'])))),
+                  if (branch != null) ...[
+                    Text(branch['name'],
+                        style: const TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold)),
+                    for (final product in products)
+                      Card(
+                          child: ListTile(
+                              title: Text(product['name']),
+                              subtitle: Text(
+                                  '${product['description']} · ${money(product['price'])}'),
+                              trailing: IconButton(
+                                  icon: const Icon(Icons.add),
+                                  onPressed: busy ||
+                                          !product['available'] ||
+                                          product['stock'] == 0
+                                      ? null
+                                      : () => run(() => add(product)))))
+                  ],
                 ],
-                onChanged:
-                    busy ? null : (value) => setState(() => method = value!)),
-            FilledButton(
-                onPressed: busy ? null : () => run(checkout),
-                child: const Text('Confirmar pedido')),
-            if (settings?['provider'] == 'mercadopago')
-              OutlinedButton(
-                  onPressed: busy ? null : () => run(webCheckout),
-                  child: const Text('Pagar con tarjeta en el checkout seguro'))
-          ]
-        ],
-        const Divider(),
-        const Text('Mis pedidos',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        OutlinedButton(
-            onPressed: busy ? null : () => run(reload),
-            child: const Text('Actualizar')),
-        for (final item in orders)
-          ListTile(
-              title: Text(item['quote']['branch']['name']),
-              subtitle:
-                  Text('${item['state']} · ${money(item['quote']['total'])}'),
-              onTap: busy ? null : () => run(() => openOrder(item['id']))),
-        if (order != null) ...[
-          Text('Estado: ${order['state']}'),
-          Text('Destino: ${order['quote']['address']['street']}'),
-          if (delivery?['deliveryPin'] != null)
-            Text('Código de entrega: ${delivery['deliveryPin']}',
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          if (delivery?['etaMinutes'] != null)
-            Text('Llegada estimada: ${delivery['etaMinutes']} min'),
-          if (['closed', 'delivered'].contains(order['state']))
-            OutlinedButton(
-                onPressed: busy ? null : () => run(rating),
-                child: const Text('Valorar restaurante y repartidor')),
-          OutlinedButton(
-              onPressed: busy ? null : () => run(support),
-              child: const Text('Solicitar ayuda'))
-        ]
-      ]));
+                if (destination == 1) ...[
+                  const SectionTitle('Tu carrito',
+                      subtitle: 'Revisa tu pedido antes de confirmar.'),
+                  if (cart.isEmpty)
+                    const Text(
+                        'Tu carrito está vacío. Explora restaurantes para añadir algo rico.'),
+                  if (cart.isNotEmpty) ...[
+                    const Divider(),
+                    for (var i = 0; i < cart.length; i++)
+                      ListTile(
+                          title: Text(
+                              '${cart[i]['quantity']} × ${cart[i]['name']}'),
+                          trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: busy
+                                  ? null
+                                  : () => run(() async {
+                                        final branchId = cart[i]['branchId'];
+                                        cart.removeAt(i);
+                                        quote = null;
+                                        await widget.api.call('/cart',
+                                            method: 'PUT',
+                                            body: {
+                                              'branchId': branchId,
+                                              'lines': lines()
+                                            });
+                                      }))),
+                    TextField(
+                        controller: coupon,
+                        decoration: const InputDecoration(labelText: 'Cupón'),
+                        onChanged: (_) => setState(() => quote = null)),
+                    TextField(
+                        controller: tip,
+                        keyboardType: TextInputType.number,
+                        decoration:
+                            const InputDecoration(labelText: 'Propina (S/)'),
+                        onChanged: (_) => setState(() => quote = null)),
+                    OutlinedButton(
+                        onPressed: busy ? null : () => run(calculate),
+                        child: const Text('Calcular total')),
+                    if (quote != null) ...[
+                      Text('Productos: ${money(quote['subtotal'])}'),
+                      Text(
+                          'Entrega: ${money(quote['delivery'])} · Servicio: ${money(quote['service'])}'),
+                      Text(
+                          'Descuento: ${money(quote['discount'])} · Propina: ${money(quote['tip'])}'),
+                      Text('Total: ${money(quote['total'])}',
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold)),
+                      DropdownButton<String>(
+                          value: method,
+                          items: [
+                            const DropdownMenuItem(
+                                value: 'cash',
+                                child: Text('Efectivo (si está habilitado)')),
+                            if (settings?['provider'] == 'sandbox')
+                              const DropdownMenuItem(
+                                  value: 'card',
+                                  child:
+                                      Text('Tarjeta de prueba, sin cobro real'))
+                          ],
+                          onChanged: busy
+                              ? null
+                              : (value) => setState(() => method = value!)),
+                      FilledButton(
+                          onPressed: busy ? null : () => run(checkout),
+                          child: const Text('Confirmar pedido')),
+                      if (settings?['provider'] == 'mercadopago')
+                        OutlinedButton(
+                            onPressed: busy ? null : () => run(webCheckout),
+                            child: const Text(
+                                'Pagar con tarjeta en el checkout seguro'))
+                    ]
+                  ],
+                ],
+                if (destination == 2) ...[
+                  const Divider(),
+                  const Text('Mis pedidos',
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  OutlinedButton(
+                      onPressed: busy ? null : () => run(reload),
+                      child: const Text('Actualizar')),
+                  if (!busy && orders.isEmpty)
+                    const Text(
+                        'Aún no tienes pedidos. Cuando confirmes uno podrás seguirlo aquí.'),
+                  for (final item in orders)
+                    ListTile(
+                        title: Text(item['quote']['branch']['name']),
+                        subtitle: Text(
+                            '${deliveryStateLabel(item['state'] as String)} · ${money(item['quote']['total'])}'),
+                        onTap: busy
+                            ? null
+                            : () => run(() => openOrder(item['id']))),
+                  if (order != null) ...[
+                    Text(
+                        'Estado: ${deliveryStateLabel(order['state'] as String)}'),
+                    Text('Destino: ${order['quote']['address']['street']}'),
+                    if (delivery?['deliveryPin'] != null)
+                      Text('Código de entrega: ${delivery['deliveryPin']}',
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold)),
+                    if (delivery?['etaMinutes'] != null)
+                      Text('Llegada estimada: ${delivery['etaMinutes']} min'),
+                    if (['closed', 'delivered'].contains(order['state']))
+                      OutlinedButton(
+                          onPressed: busy ? null : () => run(rating),
+                          child:
+                              const Text('Valorar restaurante y repartidor')),
+                    OutlinedButton(
+                        onPressed: busy ? null : () => run(support),
+                        child: const Text('Solicitar ayuda'))
+                  ]
+                ],
+              ])));
 }

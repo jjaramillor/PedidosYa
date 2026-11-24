@@ -107,3 +107,5 @@ Reasignación: privacidad de posiciones anteriores corregida en consultas y even
 Avance visual F1-04a/F1-05b: comercio ficticio afiliado, suspendido y reactivado; pedido sandbox reasignado antes del retiro desde Administración y cancelado al concluir la prueba. Se corrigieron el desbordamiento de botones y la identificación de repartidores. [Evidencia y pendientes](validacion-local.md#afiliación-y-reasignación-desde-web). Compilación Angular aprobada.
 
 UI/UX: primera etapa minimalista aplicada a la portada del cliente y al espacio del comercio, con navegación por tareas y filtros por etapa. [Comprobaciones y capturas](validacion-local.md#primera-etapa-de-ui-y-ux). El rediseño de checkout, seguimiento, Administración y repartidor continúa en el TODO.
+
+App Flutter: primera adaptación minimalista y navegación separada para cliente y repartidor, instalada y revisada en Android; análisis sin observaciones y 20 pruebas aprobadas. [Evidencia](validacion-local.md#presentación-minimalista-en-la-app-flutter).

@@ -149,3 +149,16 @@ Comprobaciones por navegador contra la API local: búsqueda sin coincidencias y 
 Evidencia: [cliente escritorio](ui-cliente-minimalista.jpg), [cliente móvil](ui-cliente-movil.jpg), [comercio: historial adaptable](ui-comercio-minimalista.jpg), [comercio móvil](ui-comercio-movil.jpg). Las ilustraciones son decorativas y no representan fotografías de platos ofrecidos por los comercios.
 
 `npm run build` aprobado, sin avisos nuevos; permanecen los avisos CommonJS de Leaflet y Mercado Pago. Se formatearon los archivos editados con Prettier. Esta etapa cambia presentación y filtrado local; no se repitieron las pruebas del backend ni Flutter. Carrito, checkout, seguimiento, Administración y repartidor mantienen pendientes su rediseño específico en el TODO.
+
+
+## Presentación minimalista en la app Flutter
+
+Primera adaptación del 23 de noviembre de 2026. El tema Material 3 comparte la paleta de la web: fondo neutro, verde profundo y acento terracota, campos con contorno, tarjetas sin elevación y botones de al menos 48 px. Los encabezados y estados de entrega están en español. Se conservan los controles de PIN, evidencia, soporte y GPS.
+
+La navegación del repartidor separa Entregas, Ganancias y Perfil. El inicio prioriza disponibilidad, ofertas y entregas; la afiliación y el acceso al cliente se encuentran en Perfil. Al abrir una entrega se oculta esa navegación para concentrarse en la tarea. En el cliente, Explorar, Carrito y Pedidos son destinos separados; añadir un producto muestra confirmación y acceso al carrito, y confirmar compra abre Pedidos.
+
+Verificación automatizada: análisis Flutter sin observaciones y 20 pruebas aprobadas. Las regresiones de sesión, expiración de ofertas, PIN, soporte y GPS tardío continúan pasando. Una prueba nueva comprueba navegación y estados vacíos del cliente a 360 px sin excepciones de layout. Las expectativas de navegación de perfil y del estado traducido se actualizaron en las regresiones existentes.
+
+APK debug compilado e instalado mediante actualización, conservando la sesión ficticia del emulador. Archivo local: `.artifacts/mobile/Delivery-emulator-ui-debug.apk`; log: `D:/Development/PedidosYa/temp/mvp-ui-mobile-build.log`. No se instalaron herramientas nuevas. La verificación visual no crea compras ni activa disponibilidad; no sustituye la aceptación integral del checkout, cámara, GPS o un dispositivo físico.
+
+En el emulador Android se observaron el inicio de Entregas con disponibilidad desactivada, el cambio a Perfil, el acceso a cliente y la navegación a Carrito y Pedidos con sus estados vacíos. Evidencia: [repartidor](app-repartidor-minimalista.png) y [cliente](app-cliente-minimalista.png). Se usó la cuenta ficticia de repartidor existente para comprobar ambos espacios; no se repitió una compra completa.

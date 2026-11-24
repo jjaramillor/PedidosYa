@@ -51,7 +51,8 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 
 - [x] UX-01 Primera etapa minimalista: portada gastronómica, búsqueda simplificada, filtros desplegables y navegación activa; comercio separado en Pedidos, Carta y Configuración, con estados y filtros por etapa. Compilación y comprobación visual en escritorio y ancho móvil de 390 px. [Evidencia](docs/mvp/validacion-local.md#primera-etapa-de-ui-y-ux).
 - [ ] UX-02 Extender la presentación al carrito, checkout y seguimiento; verificar compra completa con el nuevo diseño.
-- [ ] UX-03 Separar áreas de Administración y aplicar la jerarquía visual al repartidor.
+- [ ] UX-03 Separar áreas de Administración; la primera adaptación del repartidor está completada en UX-05.
+- [x] UX-05 Aplicar base visual minimalista en Flutter y separar navegación de cliente (Explorar/Carrito/Pedidos) y repartidor (Entregas/Ganancias/Perfil); análisis y 20 pruebas aprobadas, APK instalado y navegación revisada en el emulador. [Evidencia](docs/mvp/validacion-local.md#presentación-minimalista-en-la-app-flutter).
 - [ ] UX-04 Incorporar fotografías propias de los comercios, revisar accesibilidad integral y validar con usuarios del piloto.
 
 ## F2 Finanzas y compensaciones
