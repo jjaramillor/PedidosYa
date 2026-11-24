@@ -162,3 +162,18 @@ Verificación automatizada: análisis Flutter sin observaciones y 20 pruebas apr
 APK debug compilado e instalado mediante actualización, conservando la sesión ficticia del emulador. Archivo local: `.artifacts/mobile/Delivery-emulator-ui-debug.apk`; log: `D:/Development/PedidosYa/temp/mvp-ui-mobile-build.log`. No se instalaron herramientas nuevas. La verificación visual no crea compras ni activa disponibilidad; no sustituye la aceptación integral del checkout, cámara, GPS o un dispositivo físico.
 
 En el emulador Android se observaron el inicio de Entregas con disponibilidad desactivada, el cambio a Perfil, el acceso a cliente y la navegación a Carrito y Pedidos con sus estados vacíos. Evidencia: [repartidor](app-repartidor-minimalista.png) y [cliente](app-cliente-minimalista.png). Se usó la cuenta ficticia de repartidor existente para comprobar ambos espacios; no se repitió una compra completa.
+
+
+## Recuperación tras perder la respuesta de renovación
+
+F0-10 verificada el 23 de noviembre de 2026. El backend mantiene refresh tokens de un solo uso: si la rotación se confirma y la respuesta no llega al cliente, este conserva el token anterior. Reutilizarlo provoca 401 y revoca esa familia de sesión. No se introducen excepciones, períodos de gracia ni recuperación del token consumido. El usuario ingresa nuevamente mediante OTP de login; las demás sesiones de la cuenta siguen activas. La recuperación de cuenta explícita conserva su política independiente de revocar sesiones anteriores.
+
+La prueba de integración descarta el cuerpo de una respuesta HTTP de refresh exitosa, reenvía el token anterior y comprueba rechazo, revocación de esa sesión, conservación de otra sesión del usuario y creación de una familia nueva por OTP. La sesión nueva se valida en el servicio y su refresh se utiliza correctamente por HTTP. El reloj de pruebas avanza para respetar el cooldown OTP. Este escenario reproduce el resultado de una respuesta perdida después del commit, sin simular un corte TCP real.
+
+En Flutter, una excepción de red conserva la credencial y no reintenta la renovación automáticamente. Un rechazo definitivo elimina el refresh guardado y el access token en memoria, con indicación de ingresar por código. La pantalla de repartidor vuelve al acceso y limpia los datos operativos de la sesión, incluyendo PIN, evidencia y solicitudes de soporte; detiene GPS. Las renovaciones manuales y automáticas comparten ahora una sola solicitud pendiente, evitando consumir el mismo token concurrentemente desde la misma instancia. No se repiten mutaciones por una respuesta perdida.
+
+Pruebas móviles nuevas: respuesta de refresh perdida después de rotación y recuperación por OTP; renovación manual/automática concurrente; retorno al ingreso por rechazo de sesión durante operación. Los fallos temporales de red y HTTP 429/500/503 conservan sus regresiones. El cliente móvil anidado muestra su error de autenticación y permite volver al espacio raíz; no se incorpora una redirección global de todas las pantallas.
+
+Validación: 23 pruebas `EpicOneIntegrationTests` aprobadas, cero omitidas (`TestResults/refresh-response-loss.trx`); análisis Flutter sin observaciones y 23 pruebas Flutter aprobadas (`D:/Development/PedidosYa/temp/refresh-mobile-tests.log`). No se ensayó pérdida física de red en el emulador ni se cerró F1-03. Este avance no modifica backend productivo ni la web.
+
+APK debug recompilado e instalado como actualización en el emulador: `.artifacts/mobile/Delivery-emulator-refresh-recovery-debug.apk`. Log local: `D:/Development/PedidosYa/temp/mvp-refresh-recovery-build.log`. La instalación no constituye validación visual de un corte de red.

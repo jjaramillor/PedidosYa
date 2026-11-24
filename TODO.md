@@ -29,7 +29,7 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 - [x] F0-07 Incidencia con devolución o continuación; permisos de soporte y cierre financiero idempotente, con pruebas de integración.
 - [x] F0-08 Acceso a soporte desde el detalle del repartidor y confirmación de envío, con prueba de interfaz simulada.
 - [ ] F0-09 Repetir las excepciones críticas en el emulador contra la API, incluyendo fotografía y límite de PIN.
-- [ ] F0-10 Verificar pérdida de respuesta durante la rotación de refresh y definir recuperación segura.
+- [x] F0-10 Verificar pérdida de respuesta durante la rotación de refresh y definir recuperación segura: sin reintento automático, rechazo definitivo limpia la sesión, nuevo OTP y renovación compartida entre llamadas concurrentes. Pruebas de integración y móvil aprobadas; no equivale a corte físico de red. [Evidencia](docs/mvp/validacion-local.md#recuperación-tras-perder-la-respuesta-de-renovación).
 
 ## F1 Operación entre roles
 

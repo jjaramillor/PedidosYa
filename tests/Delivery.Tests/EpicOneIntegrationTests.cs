@@ -86,6 +86,27 @@ public sealed class EpicOneIntegrationTests(IntegrationFixture fixture) : IClass
     }
 
     [Fact]
+    public async Task Lost_refresh_response_requires_new_otp_without_revoking_other_devices()
+    {
+        await fixture.ResetAsync();
+        var lost = await Register();
+        var otherDevice = await Login();
+        // The server commits rotation, but the client never consumes the response body.
+        using (var discarded = await fixture.Client.PostAsJsonAsync("/api/v1/identity/sessions/refresh", new RefreshSession(lost.RefreshToken)))
+            Assert.Equal(HttpStatusCode.OK, discarded.StatusCode);
+        using var retry = await fixture.Client.PostAsJsonAsync("/api/v1/identity/sessions/refresh", new RefreshSession(lost.RefreshToken));
+        Assert.Equal(HttpStatusCode.Unauthorized, retry.StatusCode);
+        Assert.Null(await Use<SessionService, AccessContext?>(s => s.ValidateAsync(lost.User.Id, lost.SessionId, Ct)));
+        Assert.NotNull(await Use<SessionService, AccessContext?>(s => s.ValidateAsync(otherDevice.User.Id, otherDevice.SessionId, Ct)));
+        var renewed = await Login();
+        Assert.NotEqual(lost.SessionId, renewed.SessionId);
+        Assert.NotNull(await Use<SessionService, AccessContext?>(s => s.ValidateAsync(renewed.User.Id, renewed.SessionId, Ct)));
+        using var usable = await fixture.Client.PostAsJsonAsync("/api/v1/identity/sessions/refresh", new RefreshSession(renewed.RefreshToken));
+        Assert.Equal(HttpStatusCode.OK, usable.StatusCode);
+        Assert.Equal(1, await fixture.CountAsync("SELECT count(*) FROM identity.security_audit WHERE action='session.refresh-reuse'"));
+    }
+
+    [Fact]
     public async Task Concurrent_refresh_detects_reuse_without_minting_multiple_active_families()
     {
         await fixture.ResetAsync(); var session = await Register();

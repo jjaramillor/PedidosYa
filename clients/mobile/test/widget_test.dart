@@ -50,6 +50,24 @@ void main() {
     expect(find.text('Solicitud de alta'), findsOneWidget);
     expect(find.text('Llegué al restaurante'), findsNothing);
   });
+  testWidgets(
+      'A rejected runtime session returns to OTP without retaining delivery controls',
+      (tester) async {
+    final api = RevokedCourierApi();
+    await tester.pumpWidget(MaterialApp(home: CourierHome(api: api)));
+    await tester.pumpAndSettle();
+    api.revoked = true;
+    await tester.ensureVisible(find.text('Actualizar ofertas y entregas'));
+    await tester.tap(find.text('Actualizar ofertas y entregas'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Enviar código'));
+    expect(find.text('Enviar código'), findsOneWidget);
+    expect(find.text('Ofertas'), findsNothing);
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.text('Reintentar sesión guardada'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('A saved session can be retried after connectivity returns',
       (tester) async {
     final api = RecoveringCourierApi();
@@ -318,6 +336,16 @@ class DelayedLocationApi extends CourierApi {
       if (locations > 1) return pending.future;
       return null;
     }
+    return super.call(path, method: method, body: body, retry: retry);
+  }
+}
+
+class RevokedCourierApi extends CourierApi {
+  bool revoked = false;
+  @override
+  Future<dynamic> call(String path,
+      {String method = 'GET', Object? body, bool retry = true}) async {
+    if (revoked) throw DeliveryApiException(401, 'Ingresa de nuevo con OTP.');
     return super.call(path, method: method, body: body, retry: retry);
   }
 }

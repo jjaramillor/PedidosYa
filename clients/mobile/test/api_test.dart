@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -64,6 +65,73 @@ void main() {
       expect(storage['delivery.refresh'], 'saved-refresh');
     });
   }
+
+  test(
+      'a response lost after rotation keeps the old token until rejection and recovers by OTP',
+      () async {
+    var rotations = 0;
+    var requests = 0;
+    final api = DeliveryApi(
+        baseUrl: 'https://example.test',
+        client: MockClient((r) async {
+          requests++;
+          if (r.url.path.endsWith('/sessions/refresh')) {
+            expect(jsonDecode(r.body)['refreshToken'], 'saved-refresh');
+            if (rotations++ == 0) {
+              throw http.ClientException('Response lost after server commit');
+            }
+            return http.Response('{}', 401);
+          }
+          if (r.url.path.endsWith('/otp/verify')) {
+            return http.Response(
+                jsonEncode({
+                  'accessToken': 'new-access',
+                  'refreshToken': 'new-family'
+                }),
+                200);
+          }
+          expect(r.headers['Authorization'], 'Bearer new-access');
+          return http.Response('{}', 200);
+        }));
+    addTearDown(api.dispose);
+    await expectLater(api.restore(), throwsA(isA<http.ClientException>()));
+    expect(requests, 1);
+    expect(storage['delivery.refresh'], 'saved-refresh');
+    await expectLater(
+        api.restore(),
+        throwsA(isA<DeliveryApiException>()
+            .having((e) => e.statusCode, 'status', 401)));
+    expect(requests, 2);
+    expect(storage.containsKey('delivery.refresh'), isFalse);
+    await api.verify('new-challenge', '123456');
+    await api.call('/identity/me');
+    expect(storage['delivery.refresh'], 'new-family');
+    expect(requests, 4);
+  });
+
+  test('concurrent automatic and manual refresh share one rotation', () async {
+    var rotations = 0;
+    final response = Completer<http.Response>();
+    final api = DeliveryApi(
+        baseUrl: 'https://example.test',
+        client: MockClient((r) async {
+          if (r.url.path.endsWith('/sessions/refresh')) {
+            rotations++;
+            return response.future;
+          }
+          return http.Response(
+              '{}', r.headers['Authorization'] == 'Bearer access' ? 200 : 401);
+        }));
+    addTearDown(api.dispose);
+    final manual = api.restore();
+    final automatic = api.call('/identity/me');
+    await Future<void>.delayed(Duration.zero);
+    response.complete(http.Response(
+        jsonEncode({'accessToken': 'access', 'refreshToken': 'rotated'}), 200));
+    await Future.wait([manual, automatic]);
+    expect(rotations, 1);
+    expect(storage['delivery.refresh'], 'rotated');
+  });
 
   test('a definitively revoked refresh token is removed', () async {
     final api = DeliveryApi(

@@ -142,6 +142,29 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       await work();
     } catch (exception) {
       if (mounted) {
+        if (exception is DeliveryApiException && exception.statusCode == 401) {
+          gps?.cancel();
+          gps = null;
+          trackedOrder = null;
+          authenticated = false;
+          available = false;
+          order = null;
+          fulfillment = null;
+          offers = [];
+          deliveries = [];
+          earnings = null;
+          userId = null;
+          challenge = null;
+          pin.clear();
+          reason.clear();
+          evidence = null;
+          cashCollected = false;
+          supportRequested = false;
+          supportMessage = null;
+          documents.clear();
+          code.clear();
+          destination = 0;
+        }
         setState(
             () => error = exception.toString().replaceFirst('Exception: ', ''));
       }

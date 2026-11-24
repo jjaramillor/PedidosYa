@@ -36,8 +36,7 @@ class DeliveryApi {
         path != '/identity/sessions/refresh' &&
         path != '/identity/login' &&
         !path.startsWith('/identity/otp/')) {
-      _refreshing ??= restore().whenComplete(() => _refreshing = null);
-      await _refreshing;
+      await restore();
       return call(path, method: method, body: body, retry: false);
     }
     dynamic value;
@@ -68,7 +67,10 @@ class DeliveryApi {
     await _store(session);
   }
 
-  Future<void> restore() async {
+  Future<void> restore() =>
+      _refreshing ??= _restore().whenComplete(() => _refreshing = null);
+
+  Future<void> _restore() async {
     final refresh = await _storage.read(key: 'delivery.refresh');
     if (refresh == null) {
       throw DeliveryApiException(401, 'Inicia sesión para continuar.');
@@ -83,6 +85,8 @@ class DeliveryApi {
       if (error.statusCode == 401) {
         _access = null;
         await _storage.delete(key: 'delivery.refresh');
+        throw DeliveryApiException(401,
+            'La sesión ya no es válida. Ingresa de nuevo con el código de tu correo.');
       }
       rethrow;
     }
