@@ -40,7 +40,7 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 - [x] F1-03a Verificar el transporte SignalR con WebSockets reales de integración: suscripción autorizada, aislamiento de pedidos, baja, resuscripción y eliminación de una sesión cerrada. [Evidencia](docs/mvp/validacion-local.md#tiempo-real-con-websockets).
 - [ ] F1-04 Ejecutar alta/revisión documental, suspensión y reactivación desde sus interfaces.
 - [ ] F1-05 Aceptar/rechazar oferta, probar reasignación antes del retiro y comprobar su bloqueo después del retiro.
-- [ ] F1-06 Atender desde soporte una solicitud abierta por el repartidor y verificar resolución visible al solicitante. Caso recibido y resuelto desde la interfaz de operación; falta consultar la respuesta desde Android.
+- [x] F1-06 Solicitud abierta desde Android, atendida y resuelta por el operador en Chrome, y resolución consultada por el repartidor tras reiniciar la app. [Evidencia](docs/mvp/validacion-local.md#respuesta-de-soporte-visible-en-android).
 
 - [x] F1-07 Ocultar PIN al terminar la entrega y corregir el error de GPS tardío tras el cierre; regresiones automatizadas aprobadas.
 

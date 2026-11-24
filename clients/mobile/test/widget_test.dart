@@ -75,6 +75,9 @@ void main() {
     await tester.tap(find.text('Llegué al restaurante'));
     await tester.pumpAndSettle();
     expect(api.actions, 1);
+    await tester.scrollUntilVisible(find.text('Respuesta perdida'), -150,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     expect(find.text('Respuesta perdida'), findsOneWidget);
     await tester.ensureVisible(find.text('Actualizar estado de entrega'));
     await tester.tap(find.text('Actualizar estado de entrega'));
@@ -179,6 +182,54 @@ void main() {
     expect(api.locations, 2);
     await tester.pumpWidget(const SizedBox());
   });
+  testWidgets(
+      'Support resolution is selected for the open delivery from stored cases',
+      (tester) async {
+    final api = CourierApi()
+      ..supportCases = [
+        {'id': 'unrelated-case', 'orderId': 'another-order'},
+        {'id': 'case-current', 'orderId': 'order-1'}
+      ]
+      ..supportDetail = {
+        'case': {'state': 'resolved'},
+        'resolution': 'Comercio contactado; continúa con el retiro.'
+      };
+    await tester.pumpWidget(MaterialApp(home: CourierHome(api: api)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Pedido order-1'), 300);
+    await tester.tap(find.text('Pedido order-1'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+        find.text('Consultar respuesta de soporte'), 150,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Consultar respuesta de soporte'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text(
+            'Última solicitud: Resuelta\nComercio contactado; continúa con el retiro.'),
+        findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('An order without support cases shows a clear empty state',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(home: CourierHome(api: CourierApi())));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Pedido order-1'), 300);
+    await tester.tap(find.text('Pedido order-1'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+        find.text('Consultar respuesta de soporte'), 150,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Consultar respuesta de soporte'));
+    await tester.pumpAndSettle();
+    expect(find.text('No hay solicitudes de ayuda para esta entrega.'),
+        findsOneWidget);
+    expect(find.text('Solicitud enviada a soporte'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
 }
 
 class CourierApi extends DeliveryApi {
@@ -187,11 +238,17 @@ class CourierApi extends DeliveryApi {
   bool loseActionResponse = false;
   int actions = 0;
   Object? supportBody;
+  List<dynamic> supportCases = [];
+  dynamic supportDetail;
   @override
   Future<void> restore() async {}
   @override
   Future<dynamic> call(String path,
       {String method = 'GET', Object? body, bool retry = true}) async {
+    if (path == '/support/cases' && method == 'GET') return supportCases;
+    if (path == '/support/cases/case-current' && method == 'GET') {
+      return supportDetail;
+    }
     if (path == '/support/cases' && method == 'POST') {
       supportBody = body;
       return {'id': 'case-1'};

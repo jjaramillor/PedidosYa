@@ -88,6 +88,19 @@ Correcciones derivadas de la prueba:
 
 Validación posterior: 14 pruebas de integración MVP aprobadas (`TestResults/mvp-simultaneo.trx`), análisis Flutter sin observaciones y 17 pruebas Flutter aprobadas. El recorrido completo se ejecutó antes de estas dos correcciones; sus regresiones se comprobaron automatizadamente.
 
-F1-02 queda completada. La reconexión visual tras pérdida de red, la consulta de la resolución desde Android, participantes/suspensiones y reasignaciones permanecen pendientes. Este ensayo no aprueba pagos reales ni las 44 funcionalidades completas.
+F1-02 queda completada. La reconexión visual tras pérdida de red, participantes/suspensiones y reasignaciones permanecen pendientes. La consulta de la resolución desde Android se completó en el avance descrito a continuación. Este ensayo no aprueba pagos reales ni las 44 funcionalidades completas.
 
 El APK corregido se compiló e instaló como `.artifacts/mobile/Delivery-emulator-simultaneo-debug.apk`; log local `D:/Development/PedidosYa/temp/mvp-simultaneo-build.log`.
+
+
+## Respuesta de soporte visible en Android
+
+F1-06 completada el 23 de noviembre de 2026. El detalle de la entrega incorpora «Consultar respuesta de soporte»: obtiene las solicitudes de la cuenta, selecciona la última del pedido abierto y consulta su estado y resolución en el servidor. No muestra casos de otros pedidos. Si no existen solicitudes, informa ese estado; una solicitud resuelta o cerrada permite pedir ayuda de nuevo si surge otro problema.
+
+Se recompiló e instaló `.artifacts/mobile/Delivery-emulator-soporte-debug.apk`. Tras reiniciar la app y recuperar la sesión, el repartidor abrió el pedido `622a8dd0-ab3a-41b9-8a96-533e7979561d` y consultó el caso creado durante el recorrido simultáneo. Android mostró «Última solicitud: Resuelta» y el texto guardado desde Chrome: «Prueba simultánea: caso recibido desde Android; retiro y entrega continúan con PIN».
+
+[Evidencia de resolución en Android](simultaneo-soporte-resuelto-android.jpg). El caso se mantuvo en `resolved`; no se volvió a crear ni se cerró por una llamada técnica para completar esta validación.
+
+Análisis Flutter sin observaciones y 19 pruebas aprobadas, con regresiones para selección de caso del pedido correcto y ausencia de solicitudes. Compilación debug aprobada; log local `D:/Development/PedidosYa/temp/mvp-soporte-respuesta-build.log`. Los permisos del backend no cambiaron y se conservan las 14 pruebas de integración aprobadas del avance anterior.
+
+La consulta es manual y muestra la última solicitud del pedido. No introduce notificaciones push ni un historial completo de conversaciones. Reconexión visual, revisión/suspensión de participantes y reasignación siguen en el TODO.

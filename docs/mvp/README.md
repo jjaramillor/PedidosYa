@@ -66,7 +66,7 @@ Supuestos actuales: PEN, horarios America/Lima, restaurantes y pedidos inmediato
 - Recorrido HTTP local aprobado con tarjeta sandbox y efectivo: registro OTP por Mailpit, aprobación de participantes, cotización, pedido, asignación, retiro con PIN, GPS sintético, entrega con PIN, cierre, valoración y registro ficticio de liquidación. Script reproducible: `scripts/verify-mvp-http.ps1`; resultado sin tokens: `.artifacts/validation/ultimo-recorrido-http.json`.
 - Se corrigió el trabajador Outbox para respetar `Messaging:RunWorker=false` en hosts de prueba; una regresión verifica que no compita con el despachador manual.
 - Angular: build de producción aprobado tras corregir el manejo de respuestas HTTP exitosas vacías. Persisten avisos CommonJS de Leaflet y Mercado Pago.
-- Flutter: análisis sin observaciones y 17 pruebas aprobadas (actualización del 23 de noviembre). JDK completo 19, SDK 36, Build Tools 35, Gradle 8.13, cachés y emulador Android 13 preparados en D. APK debug instalado; llegada, retiro y entrega con PIN, GPS sintético, ganancias y cierre sandbox comprobados el 23 de noviembre. iOS requiere macOS y firma. Ver [preparación Android](android-local.md).
+- Flutter: análisis sin observaciones y 19 pruebas aprobadas (actualización del 23 de noviembre). JDK completo 19, SDK 36, Build Tools 35, Gradle 8.13, cachés y emulador Android 13 preparados en D. APK debug instalado; llegada, retiro y entrega con PIN, GPS sintético, ganancias y cierre sandbox comprobados el 23 de noviembre. iOS requiere macOS y firma. Ver [preparación Android](android-local.md).
 - Falta la aceptación funcional completa de las interfaces web y móviles y dispositivos reales. El recorrido simultáneo local por roles se aprobó el 23 de noviembre; quedan excepciones y reconexión por aceptar.
 - Falta validar la cuenta real de pagos, webhook HTTPS, SMTP y proveedor de mapas. No se hicieron cobros, devoluciones ni transferencias reales. Estos resultados no constituyen aprobación para producción.
 
@@ -98,4 +98,6 @@ Control de tareas y aceptación: [TODO del MVP](../../TODO.md). Avance de F1: se
 
 Tiempo real: transporte SignalR sobre WebSockets verificado con aislamiento de pedidos y eliminación de suscripciones revocadas; 14 pruebas de integración MVP aprobadas. [Evidencia y límites](validacion-local.md#tiempo-real-con-websockets). El recorrido simultáneo por interfaces fue completado posteriormente en F1-02; sigue pendiente la reconexión visual.
 
-Recorrido simultáneo F1-02 aprobado con sesiones aisladas de cliente, comercio, operador y Android: pedido sandbox S/32,56 cerrado. [Evidencia y correcciones de PIN/GPS](validacion-local.md#recorrido-simultáneo-por-interfaces). F1-03 conserva pendiente la reconexión visual; F1-06 conserva pendiente mostrar la resolución en Android.
+Recorrido simultáneo F1-02 aprobado con sesiones aisladas de cliente, comercio, operador y Android: pedido sandbox S/32,56 cerrado. [Evidencia y correcciones de PIN/GPS](validacion-local.md#recorrido-simultáneo-por-interfaces). F1-03 conserva pendiente la reconexión visual; F1-06 quedó completada posteriormente con consulta de la resolución en Android.
+
+F1-06 completada: el repartidor consultó desde la app reiniciada la resolución guardada por el operador. [Evidencia](validacion-local.md#respuesta-de-soporte-visible-en-android).

@@ -58,6 +58,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   bool available = false;
   bool cashCollected = false;
   bool supportRequested = false;
+  String? supportMessage;
   String vehicle = 'bicycle';
   final documents = <String>[];
   String? evidence;
@@ -241,6 +242,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       evidence = null;
       cashCollected = false;
       supportRequested = false;
+      supportMessage = null;
       pin.clear();
       reason.clear();
     }
@@ -285,6 +287,31 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       'evidenceIds': <String>[]
     });
     supportRequested = true;
+    supportMessage = 'Solicitud pendiente de revisión.';
+  }
+
+  Future<void> loadSupportResponse() async {
+    final cases = await api.call('/support/cases') as List<dynamic>;
+    final matching = cases.where((item) => item['orderId'] == order!['id']);
+    if (matching.isEmpty) {
+      supportMessage = 'No hay solicitudes de ayuda para esta entrega.';
+      return;
+    }
+    final detail = await api.call('/support/cases/${matching.first['id']}');
+    final state = detail['case']['state'] as String;
+    final label = {
+          'open': 'Pendiente de revisión',
+          'investigating': 'En investigación',
+          'resolved': 'Resuelta',
+          'closed': 'Cerrada'
+        }[state] ??
+        'En revisión';
+    final resolution = (detail['resolution'] as String?)?.trim();
+    supportRequested = !['resolved', 'closed'].contains(state);
+    supportMessage = 'Última solicitud: $label';
+    if (resolution != null && resolution.isNotEmpty) {
+      supportMessage = '$supportMessage\n$resolution';
+    }
   }
 
   Future<void> sendLocation(String id) async {
@@ -364,6 +391,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                           evidence = null;
                           cashCollected = false;
                           supportRequested = false;
+                          supportMessage = null;
                           documents.clear();
                           email.clear();
                           code.clear();
@@ -665,7 +693,15 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                     icon: const Icon(Icons.support_agent),
                     label: Text(supportRequested
                         ? 'Solicitud enviada a soporte'
-                        : 'Solicitar ayuda con esta entrega'))
+                        : 'Solicitar ayuda con esta entrega')),
+                OutlinedButton(
+                    onPressed: busy ? null : () => run(loadSupportResponse),
+                    child: const Text('Consultar respuesta de soporte')),
+                if (supportMessage != null)
+                  Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child:
+                          Text(supportMessage!, semanticsLabel: supportMessage))
               ]
             ]
           ]));
