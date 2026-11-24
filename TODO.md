@@ -34,8 +34,9 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 ## F1 Operación entre roles
 
 - [x] F1-01 Verificar consultas HTTP concurrentes con sesiones separadas de cliente, comercio, repartidor, soporte y tercero ajeno; aislamiento de PIN, revocación de permisos y cierre de una sesión sin afectar otras. [Evidencia](docs/mvp/validacion-local.md#sesiones-independientes-y-control-por-rol).
-- [ ] F1-02 Cliente, comercio y soporte en navegadores aislados, con repartidor Android: completar otro pedido sin intervención técnica.
+- [ ] F1-02 Cliente, comercio y soporte en navegadores aislados, con repartidor Android: completar otro pedido sin intervención técnica. Sesiones de navegador preparadas; aceptación pendiente porque el control del navegador agotó su tiempo de respuesta incluso tras reiniciarlo.
 - [ ] F1-03 Comprobar actualizaciones SignalR y mapa en vivo; reconexión sin estados obsoletos ni filtración entre pedidos.
+- [x] F1-03a Verificar el transporte SignalR con WebSockets reales de integración: suscripción autorizada, aislamiento de pedidos, baja, resuscripción y eliminación de una sesión cerrada. [Evidencia](docs/mvp/validacion-local.md#tiempo-real-con-websockets).
 - [ ] F1-04 Ejecutar alta/revisión documental, suspensión y reactivación desde sus interfaces.
 - [ ] F1-05 Aceptar/rechazar oferta, probar reasignación antes del retiro y comprobar su bloqueo después del retiro.
 - [ ] F1-06 Atender desde soporte una solicitud abierta por el repartidor y verificar resolución visible al solicitante.

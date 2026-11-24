@@ -285,6 +285,48 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
     }
 
     [Fact]
+    public async Task SignalR_transport_isolates_orders_and_removes_logged_out_subscriptions()
+    {
+        var scenario=await PrepareDelivery("card");var outsider=await Register("live-outsider@mvp.test");
+        async Task<SignalRProbe> Connect(AuthSession session)
+        {
+            var client=fixture.Factory.Server.CreateWebSocketClient();
+            client.ConfigureRequest=request=>request.Headers["Authorization"]="Bearer "+session.AccessToken;
+            var socket=await client.ConnectAsync(new Uri("ws://localhost/hubs/orders"),Ct);
+            var probe=new SignalRProbe(socket);await probe.Send(new{protocol="json",version=1});
+            Assert.False((await probe.Read()).TryGetProperty("error",out _));return probe;
+        }
+        using var customer=await Connect(scenario.Customer);using var merchant=await Connect(scenario.OwnerSession);using var stranger=await Connect(outsider);
+        var order=scenario.Order.Id;
+        Assert.False((await customer.Invoke("Subscribe",order)).TryGetProperty("error",out _));
+        Assert.False((await merchant.Invoke("Subscribe",order)).TryGetProperty("error",out _));
+        Assert.True((await stranger.Invoke("Subscribe",order)).TryGetProperty("error",out _));
+        var live=Service<Delivery.Api.LiveConnections>();Assert.Equal(2,live.Subscriptions.Count);
+        var realtime=Service<IOrderRealtime>();
+        await realtime.PublishAsync(Guid.NewGuid(),new{State="unrelated"},Ct);
+        await realtime.PublishAsync(order,new{State="ready"},Ct);
+        foreach(var probe in new[]{customer,merchant})
+        {
+            var message=await probe.Read();Assert.Equal("orderChanged",message.GetProperty("target").GetString());
+            var data=message.GetProperty("arguments")[0];Assert.Equal(order,data.GetProperty("orderId").GetGuid());
+            Assert.Equal("ready",data.GetProperty("update").GetProperty("state").GetString());
+        }
+        // A protocol completion acts as a barrier: any leaked update would arrive first.
+        Assert.True((await stranger.Invoke("Subscribe",order)).TryGetProperty("error",out _));
+        Assert.False((await merchant.Invoke("Unsubscribe",order)).TryGetProperty("error",out _));
+        Assert.Single(live.Subscriptions);
+        using var http=fixture.Factory.CreateClient();http.DefaultRequestHeaders.Authorization=new("Bearer",scenario.Customer.AccessToken);
+        using var logout=await http.PostAsJsonAsync("/api/v1/identity/logout",new{});Assert.True(logout.IsSuccessStatusCode);
+        await realtime.PublishAsync(order,new{State="must-not-reach-revoked-session"},Ct);
+        Assert.Empty(live.Subscriptions);
+        Assert.False((await customer.Invoke("Unsubscribe",order)).TryGetProperty("error",out _));
+        // No update may leak to an unsubscribed connection, even though its socket stays open.
+        Assert.False((await merchant.Invoke("Subscribe",order)).TryGetProperty("error",out _));
+        await realtime.PublishAsync(order,new{State="after-resubscribe"},Ct);
+        Assert.Equal("after-resubscribe",(await merchant.Read()).GetProperty("arguments")[0].GetProperty("update").GetProperty("state").GetString());
+    }
+
+    [Fact]
     public async Task Browser_verify_requires_antiforgery_while_native_bearer_contract_is_unchanged()
     {
         await fixture.ResetAsync();

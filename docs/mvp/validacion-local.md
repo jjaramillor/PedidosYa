@@ -39,3 +39,16 @@ Comprobaciones aprobadas:
 Resultado: 13 pruebas de integración MVP aprobadas, cero fallos y cero omitidas, contra PostGIS y Redis de Testcontainers. Evidencia local: `TestResults/mvp-roles.trx`. Código reproducible en `tests/Delivery.Tests/MvpIntegrationTests.cs`.
 
 Esta prueba cubre autenticación, autorización, aislamiento y lecturas HTTP concurrentes. No cubre todavía varios navegadores operando simultáneamente, propagación SignalR en vivo ni reconexión visual. Su seguimiento está en [TODO del MVP](../../TODO.md), fase F1.
+
+
+## Tiempo real con WebSockets
+
+Avance del 23 de noviembre de 2026. La prueba `SignalR_transport_isolates_orders_and_removes_logged_out_subscriptions` abre conexiones WebSocket reales contra el host de integración y usa handshake e invocaciones del protocolo JSON de SignalR. No sustituye el hub por un mock ni instala dependencias adicionales.
+
+Comprobaciones: cliente y comercio autorizados reciben `orderChanged` para el pedido suscrito; un usuario ajeno no puede suscribirse ni recibe actualizaciones; publicar otro identificador de pedido no filtra eventos; desuscribir elimina la suscripción del registro y resuscribir restablece la recepción. Cerrar la sesión HTTP del cliente elimina su suscripción en la publicación siguiente y no le entrega esa actualización, aunque el socket siga abierto. Las respuestas de invocaciones posteriores sirven de barrera para detectar mensajes inesperados.
+
+El recorrido simultáneo por interfaces F1-02 se intentó con cliente IAB en localhost, comercio IAB en IPv6 loopback y soporte en Chrome. El acceso a IPv4 del servidor web fue rechazado; IPv6 cargó la aplicación. El control del navegador dejó de responder y continuó fallando tras reiniciarlo. No se confirmó un pedido nuevo ni se completó ese recorrido: F1-02 y la aceptación visual de mapa/reconexión F1-03 permanecen abiertos. La preparación de sesiones no acredita el flujo de negocio.
+
+Esta prueba cubre transporte y autorización de eventos publicados de forma controlada; la recuperación automática del cliente Angular y los cambios de estado vistos simultáneamente en pantalla requieren su propia aceptación.
+
+Resultado: 14 pruebas de integración MVP aprobadas, cero fallos y cero omitidas contra PostGIS/Redis. Evidencia local: `TestResults/mvp-tiempo-real.trx`. La suite completa de la solución y las pruebas Flutter no se repitieron en este avance, que modifica únicamente pruebas y seguimiento documental.

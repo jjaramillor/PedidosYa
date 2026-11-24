@@ -95,3 +95,5 @@ Revisión consolidada de requerimientos, límites y criterios de cierre: [revisi
 Validación de excepciones: 12 pruebas de integración MVP aprobadas para bloqueo de PIN, incidencia, devolución o continuación, permisos de soporte y conflictos de cierre simultáneos. La app del repartidor incorpora solicitud de soporte desde el detalle. Alcance y evidencia en [Android local](android-local.md#bloqueo-de-pin-y-resolución-de-incidencias).
 
 Control de tareas y aceptación: [TODO del MVP](../../TODO.md). Avance de F1: sesiones HTTP independientes, aislamiento de PIN y revocación comprobados; 13 pruebas de integración MVP aprobadas. Ver [validación por rol](validacion-local.md#sesiones-independientes-y-control-por-rol).
+
+Tiempo real: transporte SignalR sobre WebSockets verificado con aislamiento de pedidos y eliminación de suscripciones revocadas; 14 pruebas de integración MVP aprobadas. [Evidencia y límites](validacion-local.md#tiempo-real-con-websockets). La aceptación simultánea por interfaces sigue pendiente.
