@@ -56,6 +56,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   String? trackedOrder;
   bool available = false;
   bool cashCollected = false;
+  bool supportRequested = false;
   String vehicle = 'bicycle';
   final documents = <String>[];
   String? evidence;
@@ -237,6 +238,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       trackedOrder = null;
       evidence = null;
       cashCollected = false;
+      supportRequested = false;
       pin.clear();
       reason.clear();
     }
@@ -267,6 +269,20 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       trackedOrder = null;
       evidence = null;
     }
+  }
+
+  Future<void> requestSupport() async {
+    final description = reason.text.trim();
+    if (description.isEmpty) {
+      throw Exception('Describe el problema en Motivo / observación.');
+    }
+    await api.call('/support/cases', method: 'POST', body: {
+      'orderId': order!['id'],
+      'subject': 'Ayuda con la entrega',
+      'description': description,
+      'evidenceIds': <String>[]
+    });
+    supportRequested = true;
   }
 
   Future<void> sendLocation(String id) async {
@@ -344,6 +360,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                           userId = null;
                           evidence = null;
                           cashCollected = false;
+                          supportRequested = false;
                           documents.clear();
                           email.clear();
                           code.clear();
@@ -637,7 +654,15 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                           ? 'Compartir ubicación durante esta entrega'
                           : 'Detener ubicación')),
                 const Text(
-                    'La ubicación se comparte solo con la app abierta y durante una entrega activa.')
+                    'La ubicación se comparte solo con la app abierta y durante una entrega activa.'),
+                OutlinedButton.icon(
+                    onPressed: busy || supportRequested
+                        ? null
+                        : () => run(requestSupport),
+                    icon: const Icon(Icons.support_agent),
+                    label: Text(supportRequested
+                        ? 'Solicitud enviada a soporte'
+                        : 'Solicitar ayuda con esta entrega'))
               ]
             ]
           ]));

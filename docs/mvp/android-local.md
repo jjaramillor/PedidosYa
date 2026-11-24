@@ -108,4 +108,25 @@ Validación automatizada del 23 de noviembre de 2026:
 
 Resultados: análisis Flutter sin observaciones y 15 pruebas aprobadas; cuatro pruebas de integración MVP aprobadas contra PostGIS/Redis de Testcontainers. Estas últimas incluyen recorridos tarjeta/efectivo con oferta vencida y PIN incorrecto antes del cierre balanceado. Evidencia local: `TestResults/mvp-excepciones.trx`.
 
-Los fallos de red se simularon en el cliente HTTP y las pruebas de interfaz. Esta validación no equivale a desconectar físicamente un dispositivo ni a comprobar una pérdida de respuesta durante la rotación de un refresh token en el servidor. Continúan pendientes ese escenario, el bloqueo tras cinco PIN erróneos, las incidencias/devoluciones y la concurrencia entre roles.
+Los fallos de red se simularon en el cliente HTTP y las pruebas de interfaz. Esta validación no equivale a desconectar físicamente un dispositivo ni a comprobar una pérdida de respuesta durante la rotación de un refresh token en el servidor. La pérdida de respuesta durante rotación de refresh y la operación simultánea por interfaces siguen pendientes. El bloqueo de PIN, las incidencias/devoluciones y los conflictos simultáneos de acciones se verificaron posteriormente en las pruebas indicadas abajo.
+
+
+## Bloqueo de PIN y resolución de incidencias
+
+Actualización del 23 de noviembre de 2026. El detalle del repartidor permite «Solicitar ayuda con esta entrega» usando el texto de Motivo / observación. La solicitud se vincula al pedido y no adjunta automáticamente el PIN introducido en su campo. Muestra confirmación y deshabilita el botón tras un envío exitoso mientras permanezca abierto ese detalle.
+
+Pruebas de integración aprobadas:
+
+- Cinco PIN incorrectos bloquean la validación por PIN tanto en retiro como en entrega. Un sexto intento con el PIN correcto sigue rechazado; el contador queda en cinco y no se generan una transición, captura ni ganancia.
+- No se permite devolver directamente desde ruta sin registrar primero una incidencia, ni actuar como repartidor usando la cuenta del cliente.
+- El repartidor abre un caso; soporte registra una nota, investiga y cierra. Un cliente no puede resolverlo como operador y un caso cerrado no admite reapertura.
+- Incidencia con devolución: pedido y entrega quedan devueltos, la autorización se cancela sin cobro ni distribución de ganancias y el repartidor queda liberado. Se verificó con tarjeta sandbox y efectivo sin recaudar.
+- Incidencia resuelta con continuación: permite volver a ruta y entregar con PIN; captura y distribución balanceada se registran una sola vez, también con tarjeta y efectivo.
+- Dos confirmaciones iguales simultáneas y un reintento posterior no duplican el cierre. Si entrega y devolución compiten desde incidencia, solo una termina el pedido y la otra recibe HTTP 409; el estado financiero coincide con el resultado ganador.
+- El backend rechaza enviar GPS después de la entrega o devolución.
+
+Resultados actuales: 12 pruebas de integración MVP aprobadas contra PostGIS/Redis de Testcontainers, cero fallos u omisiones (`TestResults/mvp-incidencias.trx`); análisis Flutter sin observaciones y 16 pruebas aprobadas, incluida apertura de soporte desde el detalle con una API simulada. Las nuevas verificaciones no requirieron cambios en las reglas del backend.
+
+APK debug compilado e instalado en el emulador: `.artifacts/mobile/Delivery-emulator-incidencias-debug.apk`. SHA-256: `32e8baff9a6d1ec45a15fd03de4b57a5a3214fbcd04093e62dc00e12d9220fc3`. Log de compilación: `D:/Development/PedidosYa/temp/mvp-incidencias-build.log`.
+
+El bloqueo del PIN no tiene un botón de desbloqueo en este cambio: abrir un caso solicita intervención, no restablece los intentos. Las devoluciones verificadas no tenían un cobro capturado previamente; el reembolso tras captura requiere su propio escenario. Permanecen pendientes la aceptación manual de estas excepciones por interfaces simultáneas, el dispositivo físico y los proveedores reales.

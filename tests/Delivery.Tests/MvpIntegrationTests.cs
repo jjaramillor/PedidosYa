@@ -13,6 +13,7 @@ using Delivery.Modules.Merchants;
 using Delivery.Modules.Orders;
 using Delivery.Modules.Payments;
 using Delivery.Modules.Pricing;
+using Delivery.Modules.Support;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,10 +42,8 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         return (await Service<PrivateDocumentStore>().UploadAsync(user,file,Ct)).Id.ToString();
     }
 
-    [Theory]
-    [InlineData("card")]
-    [InlineData("cash")]
-    public async Task Checkout_to_verified_delivery_records_balanced_settlement_and_stops_GPS(string method)
+    private sealed record DeliveryScenario(Caller Admin,AuthSession Customer,Caller Owner,Caller Courier,AuthSession CourierSession,QuoteSnapshot Quote,OrderView Order);
+    private async Task<DeliveryScenario> PrepareDelivery(string method)
     {
         await fixture.ResetAsync();
         var admin=CallerFor(await Register("admin@mvp.test"),true);
@@ -82,6 +81,22 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"preparing","prepare"),Ct);
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"ready","ready"),Ct);await Drain();
         await Service<DeliveryService>().ActionAsync(courier,order.Id,new(Guid.NewGuid(),"arrived",null,null,"arrived"),Ct);
+        return new(admin,customer,owner,courier,courierSession,quote,order);
+    }
+    private async Task StartRoute(DeliveryScenario scenario)
+    {
+        var pickup=(await Service<DeliveryService>().GetAsync(scenario.Owner,scenario.Order.Id,Ct)).PickupPin;
+        await Service<DeliveryService>().ActionAsync(scenario.Courier,scenario.Order.Id,new(Guid.NewGuid(),"picked_up",pickup,null,"verified pickup"),Ct);await Drain();
+        await Service<DeliveryService>().ActionAsync(scenario.Courier,scenario.Order.Id,new(Guid.NewGuid(),"in_transit",null,null,"start route"),Ct);await Drain();
+    }
+
+    [Theory]
+    [InlineData("card")]
+    [InlineData("cash")]
+    public async Task Checkout_to_verified_delivery_records_balanced_settlement_and_stops_GPS(string method)
+    {
+        var (admin,customer,owner,courier,courierSession,quote,order)=await PrepareDelivery(method);
+        var customerCaller=CallerFor(customer);
         var pickup=(await Service<DeliveryService>().GetAsync(owner,order.Id,Ct)).PickupPin;
         Assert.Null((await Service<DeliveryService>().GetAsync(courier,order.Id,Ct)).PickupPin);
         fixture.Client.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",courierSession.AccessToken);
@@ -110,6 +125,112 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers WHERE kind='incentive'"));
         fixture.Client.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",customer.AccessToken);
         var restricted=await fixture.Client.GetAsync("/api/v1/admin/zones");Assert.Equal(HttpStatusCode.Forbidden,restricted.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("picked_up")]
+    [InlineData("delivered")]
+    public async Task Five_invalid_PINs_block_even_the_correct_PIN_without_advancing(string target)
+    {
+        var scenario=await PrepareDelivery("card");
+        if(target=="delivered")await StartRoute(scenario);
+        var authorized=target=="picked_up"?scenario.Owner:CallerFor(scenario.Customer);
+        var info=await Service<DeliveryService>().GetAsync(authorized,scenario.Order.Id,Ct);
+        var correct=target=="picked_up"?info.PickupPin:info.DeliveryPin;
+        var wrong=correct=="000000"?"111111":"000000";
+        var state=target=="picked_up"?"arrived":"in_transit";
+        var operations=await fixture.CountAsync("SELECT count(*) FROM deliveries.operations");
+        var counter=target=="picked_up"?"pickup_attempts":"drop_attempts";
+        for(var attempt=1;attempt<=5;attempt++)
+        {
+            var invalid=await Assert.ThrowsAsync<ApiException>(()=>Service<DeliveryService>().ActionAsync(scenario.Courier,scenario.Order.Id,new(Guid.NewGuid(),target,wrong,null,"invalid PIN test"),Ct));
+            Assert.Equal(422,invalid.StatusCode);Assert.Equal("invalid_delivery_pin",invalid.Code);
+            Assert.Equal(attempt,await fixture.CountAsync($"SELECT {counter} FROM deliveries.deliveries"));
+        }
+        var blocked=await Assert.ThrowsAsync<ApiException>(()=>Service<DeliveryService>().ActionAsync(scenario.Courier,scenario.Order.Id,new(Guid.NewGuid(),target,correct,null,"correct PIN after lock"),Ct));
+        Assert.Equal(422,blocked.StatusCode);
+        Assert.Equal(5,await fixture.CountAsync($"SELECT {counter} FROM deliveries.deliveries"));
+        Assert.Equal(operations,await fixture.CountAsync("SELECT count(*) FROM deliveries.operations"));
+        Assert.Equal(state,(await Service<DeliveryService>().GetAsync(scenario.Courier,scenario.Order.Id,Ct)).State);
+        await Drain();
+        Assert.Equal(0,(await Service<PaymentService>().InfoAsync(scenario.Order.Id,Ct)).Captured);
+        Assert.Equal(0,await fixture.CountAsync("SELECT count(*) FROM ledger.deliveries"));
+    }
+
+    [Theory]
+    [InlineData("card",false)]
+    [InlineData("cash",false)]
+    [InlineData("card",true)]
+    [InlineData("cash",true)]
+    public async Task Incident_can_return_or_resume_with_audited_support_and_idempotent_closure(string method,bool resume)
+    {
+        var scenario=await PrepareDelivery(method);await StartRoute(scenario);
+        var courier=scenario.Courier;var order=scenario.Order.Id;
+        var directReturn=await Assert.ThrowsAsync<ApiException>(()=>Service<DeliveryService>().ActionAsync(courier,order,new(Guid.NewGuid(),"returned",null,null,"return without incident"),Ct));
+        Assert.Equal("invalid_delivery_transition",directReturn.Code);
+        var unauthorized=await Assert.ThrowsAsync<ApiException>(()=>Service<DeliveryService>().ActionAsync(CallerFor(scenario.Customer),order,new(Guid.NewGuid(),"incident",null,null,"customer cannot impersonate courier"),Ct));
+        Assert.Equal(403,unauthorized.StatusCode);
+        var incident=new DeliveryAction(Guid.NewGuid(),"incident",null,null,"receiver unavailable");
+        await Service<DeliveryService>().ActionAsync(courier,order,incident,Ct);
+        await Service<DeliveryService>().ActionAsync(courier,order,incident,Ct);await Drain();
+        Assert.Equal("incident",(await Service<OrderService>().GetAsync(order,Ct)).State);
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM deliveries.operations WHERE state='incident'"));
+        var support=Service<SupportService>();
+        var caseId=await support.OpenAsync(courier,new(order,"Delivery incident","Receiver unavailable; operator review requested",[]),Ct);
+        var denied=await Assert.ThrowsAsync<ApiException>(()=>support.UpdateAsync(CallerFor(scenario.Customer),caseId,new("closed","unauthorized resolution",null),Ct));
+        Assert.Equal(403,denied.StatusCode);
+        await support.NoteAsync(scenario.Admin,caseId,"Contact attempt registered",Ct);
+        await support.UpdateAsync(scenario.Admin,caseId,new("investigating","Review in progress",scenario.Admin.Id),Ct);
+        DeliveryAction terminal;
+        if(resume)
+        {
+            await Service<DeliveryService>().ActionAsync(courier,order,new(Guid.NewGuid(),"in_transit",null,null,"receiver now available"),Ct);await Drain();
+            var pin=(await Service<DeliveryService>().GetAsync(CallerFor(scenario.Customer),order,Ct)).DeliveryPin;
+            terminal=new(Guid.NewGuid(),"delivered",pin,null,"resolved incident and verified delivery",method=="cash");
+        }
+        else terminal=new(Guid.NewGuid(),"returned",null,null,"return confirmed at restaurant");
+        await Task.WhenAll(Service<DeliveryService>().ActionAsync(courier,order,terminal,Ct),
+            Service<DeliveryService>().ActionAsync(courier,order,terminal,Ct));await Drain();
+        await Service<DeliveryService>().ActionAsync(courier,order,terminal,Ct);await Drain();
+        Assert.Equal(resume?"closed":"returned",(await Service<OrderService>().GetAsync(order,Ct)).State);
+        var payment=await Service<PaymentService>().InfoAsync(order,Ct);
+        Assert.Equal(resume?"captured":"cancelled",payment.State);
+        Assert.Equal(resume?scenario.Quote.Total:0,payment.Captured);
+        Assert.Equal(resume?1:0,await fixture.CountAsync("SELECT count(*) FROM ledger.deliveries"));
+        Assert.Equal(resume?1:0,await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers WHERE kind='delivery'"));
+        Assert.Equal(0,await fixture.CountAsync("SELECT count(*) FROM (SELECT voucher_id FROM ledger.lines GROUP BY voucher_id HAVING sum(amount)<>0) imbalance"));
+        Assert.Equal("completed",Assert.Single(await Service<DispatchService>().OffersAsync(courier,Ct)).State);
+        await Assert.ThrowsAsync<ApiException>(()=>Service<DeliveryService>().UpdateLocationAsync(courier,order,new(-12.05,-77.05),Ct));
+        await support.UpdateAsync(scenario.Admin,caseId,new("closed",resume?"Delivered after contact":"Returned and authorization cancelled",scenario.Admin.Id),Ct);
+        Assert.Equal("closed",Assert.Single(await support.ListAsync(scenario.Admin,Ct)).State);
+        var reopen=await Assert.ThrowsAsync<ApiException>(()=>support.UpdateAsync(scenario.Admin,caseId,new("open","attempt reopen",null),Ct));
+        Assert.Equal("case_closed",reopen.Code);
+        Assert.True(await fixture.CountAsync("SELECT count(*) FROM platform.audit WHERE module='support'")>0);
+    }
+
+    [Theory]
+    [InlineData("card")]
+    [InlineData("cash")]
+    public async Task Concurrent_return_and_delivery_have_only_one_terminal_outcome(string method)
+    {
+        var scenario=await PrepareDelivery(method);await StartRoute(scenario);
+        var order=scenario.Order.Id;var delivery=Service<DeliveryService>();
+        await delivery.ActionAsync(scenario.Courier,order,new(Guid.NewGuid(),"incident",null,null,"receiver unavailable"),Ct);await Drain();
+        var pin=(await delivery.GetAsync(CallerFor(scenario.Customer),order,Ct)).DeliveryPin;
+        DeliveryAction[] actions=[new(Guid.NewGuid(),"delivered",pin,null,"receiver found",method=="cash"),new(Guid.NewGuid(),"returned",null,null,"return requested")];
+        var outcomes=await Task.WhenAll(actions.Select(action=>Record.ExceptionAsync(()=>delivery.ActionAsync(scenario.Courier,order,action,Ct))));
+        Assert.Single(outcomes,error=>error is null);
+        var conflict=Assert.IsType<ApiException>(Assert.Single(outcomes,error=>error is not null));
+        Assert.Equal(409,conflict.StatusCode);Assert.Equal("invalid_delivery_transition",conflict.Code);
+        await Drain();
+        var delivered=(await delivery.GetAsync(scenario.Courier,order,Ct)).State=="delivered";
+        Assert.Equal(delivered?"closed":"returned",(await Service<OrderService>().GetAsync(order,Ct)).State);
+        var payment=await Service<PaymentService>().InfoAsync(order,Ct);
+        Assert.Equal(delivered?"captured":"cancelled",payment.State);
+        Assert.Equal(delivered?scenario.Quote.Total:0,payment.Captured);
+        Assert.Equal(delivered?1:0,await fixture.CountAsync("SELECT count(*) FROM ledger.deliveries"));
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM deliveries.operations WHERE state IN('delivered','returned')"));
+        Assert.Equal(0,await fixture.CountAsync("SELECT count(*) FROM (SELECT voucher_id FROM ledger.lines GROUP BY voucher_id HAVING sum(amount)<>0) imbalance"));
     }
 
     [Fact]

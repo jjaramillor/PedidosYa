@@ -66,7 +66,7 @@ Supuestos actuales: PEN, horarios America/Lima, restaurantes y pedidos inmediato
 - Recorrido HTTP local aprobado con tarjeta sandbox y efectivo: registro OTP por Mailpit, aprobación de participantes, cotización, pedido, asignación, retiro con PIN, GPS sintético, entrega con PIN, cierre, valoración y registro ficticio de liquidación. Script reproducible: `scripts/verify-mvp-http.ps1`; resultado sin tokens: `.artifacts/validation/ultimo-recorrido-http.json`.
 - Se corrigió el trabajador Outbox para respetar `Messaging:RunWorker=false` en hosts de prueba; una regresión verifica que no compita con el despachador manual.
 - Angular: build de producción aprobado tras corregir el manejo de respuestas HTTP exitosas vacías. Persisten avisos CommonJS de Leaflet y Mercado Pago.
-- Flutter: análisis sin observaciones y 15 pruebas aprobadas (actualización del 23 de noviembre). JDK completo 19, SDK 36, Build Tools 35, Gradle 8.13, cachés y emulador Android 13 preparados en D. APK debug instalado; llegada, retiro y entrega con PIN, GPS sintético, ganancias y cierre sandbox comprobados el 23 de noviembre. iOS requiere macOS y firma. Ver [preparación Android](android-local.md).
+- Flutter: análisis sin observaciones y 16 pruebas aprobadas (actualización del 23 de noviembre). JDK completo 19, SDK 36, Build Tools 35, Gradle 8.13, cachés y emulador Android 13 preparados en D. APK debug instalado; llegada, retiro y entrega con PIN, GPS sintético, ganancias y cierre sandbox comprobados el 23 de noviembre. iOS requiere macOS y firma. Ver [preparación Android](android-local.md).
 - Falta la aceptación funcional completa de las interfaces web y móviles, incluyendo operación simultánea por roles y dispositivos reales.
 - Falta validar la cuenta real de pagos, webhook HTTPS, SMTP y proveedor de mapas. No se hicieron cobros, devoluciones ni transferencias reales. Estos resultados no constituyen aprobación para producción.
 
@@ -91,3 +91,5 @@ Aceptación web de cliente y comercio ejecutada el 4 de noviembre de 2026: [reco
 
 
 Revisión consolidada de requerimientos, límites y criterios de cierre: [revisión de alcance](revision-alcance.md).
+
+Validación de excepciones: 12 pruebas de integración MVP aprobadas para bloqueo de PIN, incidencia, devolución o continuación, permisos de soporte y conflictos de cierre simultáneos. La app del repartidor incorpora solicitud de soporte desde el detalle. Alcance y evidencia en [Android local](android-local.md#bloqueo-de-pin-y-resolución-de-incidencias).

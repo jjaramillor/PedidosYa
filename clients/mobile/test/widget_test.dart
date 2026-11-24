@@ -93,6 +93,42 @@ void main() {
     expect(find.text('Aceptar'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
+  testWidgets(
+      'A courier can open support for the selected delivery without sharing its PIN',
+      (tester) async {
+    final api = CourierApi();
+    await tester.pumpWidget(MaterialApp(home: CourierHome(api: api)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Pedido order-1'), 300);
+    await tester.tap(find.text('Pedido order-1'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Motivo / observación'),
+        'PIN bloqueado: necesito asistencia');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Código de retiro o entrega'), '123456');
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+        find.text('Solicitar ayuda con esta entrega'), 150,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Solicitar ayuda con esta entrega'));
+    await tester.pumpAndSettle();
+    expect(api.supportBody, {
+      'orderId': 'order-1',
+      'subject': 'Ayuda con la entrega',
+      'description': 'PIN bloqueado: necesito asistencia',
+      'evidenceIds': <String>[]
+    });
+    expect(find.text('Solicitud enviada a soporte'), findsOneWidget);
+    final button = tester.widget<OutlinedButton>(find.ancestor(
+        of: find.text('Solicitud enviada a soporte'),
+        matching:
+            find.byWidgetPredicate((widget) => widget is OutlinedButton)));
+    expect(button.onPressed, isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
 }
 
 class CourierApi extends DeliveryApi {
@@ -100,11 +136,16 @@ class CourierApi extends DeliveryApi {
   String state = 'assigned';
   bool loseActionResponse = false;
   int actions = 0;
+  Object? supportBody;
   @override
   Future<void> restore() async {}
   @override
   Future<dynamic> call(String path,
       {String method = 'GET', Object? body, bool retry = true}) async {
+    if (path == '/support/cases' && method == 'POST') {
+      supportBody = body;
+      return {'id': 'case-1'};
+    }
     if (path == '/deliveries/order-1/actions' && method == 'POST') {
       actions++;
       state = (body as Map)['state'] as String;
