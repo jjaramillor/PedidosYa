@@ -93,3 +93,5 @@ Aceptación web de cliente y comercio ejecutada el 4 de noviembre de 2026: [reco
 Revisión consolidada de requerimientos, límites y criterios de cierre: [revisión de alcance](revision-alcance.md).
 
 Validación de excepciones: 12 pruebas de integración MVP aprobadas para bloqueo de PIN, incidencia, devolución o continuación, permisos de soporte y conflictos de cierre simultáneos. La app del repartidor incorpora solicitud de soporte desde el detalle. Alcance y evidencia en [Android local](android-local.md#bloqueo-de-pin-y-resolución-de-incidencias).
+
+Control de tareas y aceptación: [TODO del MVP](../../TODO.md). Avance de F1: sesiones HTTP independientes, aislamiento de PIN y revocación comprobados; 13 pruebas de integración MVP aprobadas. Ver [validación por rol](validacion-local.md#sesiones-independientes-y-control-por-rol).

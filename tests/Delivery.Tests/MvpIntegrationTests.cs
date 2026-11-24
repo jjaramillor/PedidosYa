@@ -42,13 +42,14 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         return (await Service<PrivateDocumentStore>().UploadAsync(user,file,Ct)).Id.ToString();
     }
 
-    private sealed record DeliveryScenario(Caller Admin,AuthSession Customer,Caller Owner,Caller Courier,AuthSession CourierSession,QuoteSnapshot Quote,OrderView Order);
+    private sealed record DeliveryScenario(Caller Admin,AuthSession Customer,Caller Owner,Caller Courier,AuthSession CourierSession,QuoteSnapshot Quote,OrderView Order)
+    {public AuthSession OwnerSession {get;init;}=null!;}
     private async Task<DeliveryScenario> PrepareDelivery(string method)
     {
         await fixture.ResetAsync();
         var admin=CallerFor(await Register("admin@mvp.test"),true);
         var customer=await Register("customer@mvp.test");var customerCaller=CallerFor(customer);
-        var owner=CallerFor(await Register("merchant@mvp.test"));var courierSession=await Register("courier@mvp.test");var courier=CallerFor(courierSession);
+        var ownerSession=await Register("merchant@mvp.test");var owner=CallerFor(ownerSession);var courierSession=await Register("courier@mvp.test");var courier=CallerFor(courierSession);
         var zone=await Service<ConfigurationService>().SaveAsync(admin,Guid.NewGuid(),new("Lima","{\"type\":\"Polygon\",\"coordinates\":[[[-77.1,-12.1],[-77,-12.1],[-77,-12],[-77.1,-12],[-77.1,-12.1]]]}",true,500,100,100,1500,400,120,method=="cash","test zone"),Ct);
         if(method=="cash")await Service<ConfigurationService>().SaveParameterAsync(admin,"cash.enabled",new(System.Text.Json.JsonSerializer.SerializeToElement(true),"cash test"),Ct);
         var merchant=await Service<MerchantService>().ApplyAsync(owner,new("Restaurant","20123456789","bank-account",[await Document(owner)]),Ct);
@@ -81,7 +82,7 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"preparing","prepare"),Ct);
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"ready","ready"),Ct);await Drain();
         await Service<DeliveryService>().ActionAsync(courier,order.Id,new(Guid.NewGuid(),"arrived",null,null,"arrived"),Ct);
-        return new(admin,customer,owner,courier,courierSession,quote,order);
+        return new(admin,customer,owner,courier,courierSession,quote,order){OwnerSession=ownerSession};
     }
     private async Task StartRoute(DeliveryScenario scenario)
     {
@@ -231,6 +232,56 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         Assert.Equal(delivered?1:0,await fixture.CountAsync("SELECT count(*) FROM ledger.deliveries"));
         Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM deliveries.operations WHERE state IN('delivered','returned')"));
         Assert.Equal(0,await fixture.CountAsync("SELECT count(*) FROM (SELECT voucher_id FROM ledger.lines GROUP BY voucher_id HAVING sum(amount)<>0) imbalance"));
+    }
+
+    [Fact]
+    public async Task Independent_role_sessions_enforce_access_and_revocation_during_parallel_reads()
+    {
+        var scenario=await PrepareDelivery("card");
+        var operatorSession=await Register("operator@mvp.test");var outsider=await Register("outsider@mvp.test");
+        using var scope=fixture.Factory.Services.CreateScope();var roles=scope.ServiceProvider.GetRequiredService<RoleService>();
+        await roles.BootstrapAdminAsync("admin@mvp.test",Ct);
+        await roles.SaveAsync(scenario.Admin.Id,"delivery-support",new("Delivery support",["support.manage","orders.operate"]),"role-isolation",Ct);
+        await roles.AssignAsync(scenario.Admin.Id,operatorSession.User.Id,new(["customer","delivery-support"]),"role-isolation",Ct);
+        HttpClient Client(AuthSession session)
+        {
+            var client=fixture.Factory.CreateClient();
+            client.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",session.AccessToken);
+            client.DefaultRequestHeaders.Add("X-Test-IP","127.0.0.77");return client;
+        }
+        using var customer=Client(scenario.Customer);using var merchant=Client(scenario.OwnerSession);
+        using var courier=Client(scenario.CourierSession);using var support=Client(operatorSession);using var stranger=Client(outsider);
+        var path=$"/api/v1/orders/{scenario.Order.Id}";
+        var responses=await Task.WhenAll(new[]{customer,merchant,courier,support,stranger}.Select(client=>client.GetAsync(path)));
+        try
+        {
+            Assert.All(responses.Take(4),response=>Assert.Equal(HttpStatusCode.OK,response.StatusCode));
+            Assert.Equal(HttpStatusCode.Forbidden,responses[4].StatusCode);
+            foreach(var response in responses.Take(4))Assert.Equal(scenario.Order.Id,(await response.Content.ReadFromJsonAsync<OrderView>())!.Id);
+        }
+        finally{foreach(var response in responses)response.Dispose();}
+        var deliveryPath=$"/api/v1/deliveries/{scenario.Order.Id}";
+        var customerView=await customer.GetFromJsonAsync<DeliveryInfo>(deliveryPath);
+        var merchantView=await merchant.GetFromJsonAsync<DeliveryInfo>(deliveryPath);
+        var courierView=await courier.GetFromJsonAsync<DeliveryInfo>(deliveryPath);
+        Assert.Null(customerView!.PickupPin);Assert.NotNull(customerView.DeliveryPin);
+        Assert.NotNull(merchantView!.PickupPin);Assert.Null(merchantView.DeliveryPin);
+        Assert.Null(courierView!.PickupPin);Assert.Null(courierView.DeliveryPin);
+        using(var denied=await stranger.GetAsync(deliveryPath))Assert.Equal(HttpStatusCode.Forbidden,denied.StatusCode);
+        using(var denied=await courier.GetAsync(path+"/payment"))Assert.Equal(HttpStatusCode.Forbidden,denied.StatusCode);
+        using(var denied=await customer.PostAsJsonAsync(path+"/actions",new OrderAction(Guid.NewGuid(),"ready","cannot impersonate restaurant")))Assert.Equal(HttpStatusCode.Forbidden,denied.StatusCode);
+        using var opened=await courier.PostAsJsonAsync("/api/v1/support/cases",new CaseInput(scenario.Order.Id,"PIN assistance","Please review pickup",[]));
+        Assert.Equal(HttpStatusCode.OK,opened.StatusCode);
+        var caseId=(await opened.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>()).GetProperty("id").GetGuid();
+        using(var view=await support.GetAsync($"/api/v1/support/cases/{caseId}"))Assert.Equal(HttpStatusCode.OK,view.StatusCode);
+        using(var denied=await stranger.GetAsync($"/api/v1/support/cases/{caseId}"))Assert.Equal(HttpStatusCode.NotFound,denied.StatusCode);
+        // Existing bearer tokens must immediately lose removed permissions.
+        await roles.AssignAsync(scenario.Admin.Id,operatorSession.User.Id,new(["customer"]),"role-isolation",Ct);
+        using(var revoked=await support.GetAsync(path))Assert.Equal(HttpStatusCode.Forbidden,revoked.StatusCode);
+        using(var revoked=await support.GetAsync($"/api/v1/support/cases/{caseId}"))Assert.Equal(HttpStatusCode.NotFound,revoked.StatusCode);
+        using(var loggedOut=await customer.PostAsJsonAsync("/api/v1/identity/logout",new{}))Assert.True(loggedOut.IsSuccessStatusCode);
+        using(var revoked=await customer.GetAsync(path))Assert.Equal(HttpStatusCode.Unauthorized,revoked.StatusCode);
+        using(var active=await merchant.GetAsync(path))Assert.Equal(HttpStatusCode.OK,active.StatusCode);
     }
 
     [Fact]

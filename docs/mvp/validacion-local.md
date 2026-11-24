@@ -21,3 +21,21 @@ Servicios locales de revisión: API `http://localhost:8080`, web de desarrollo `
 Pendientes: aceptación completa de clientes por rol, compilación y prueba de aplicaciones móviles, configuración y ensayo de proveedor real en entorno de pruebas, despliegue HTTPS y validación operativa. Los documentos originales de alcance y arquitectura no se modificaron.
 
 Verificación en navegador: acceso OTP, carga completa de cuenta y notificaciones, cierre y nuevo inicio de sesión, y ambos pedidos completados visibles. La respuesta vacía del carrito ya no genera error JSON. [Captura](web-pedidos-validados.png). Esta comprobación no sustituye la aceptación completa por roles.
+
+
+## Sesiones independientes y control por rol
+
+Actualización del 23 de noviembre de 2026. La prueba `Independent_role_sessions_enforce_access_and_revocation_during_parallel_reads` usa cinco clientes HTTP independientes contra el host de integración: cliente comprador, dueño del restaurante, repartidor asignado, operador de soporte y cliente ajeno.
+
+Comprobaciones aprobadas:
+
+- Los cuatro participantes autorizados consultan concurrentemente el mismo pedido; el tercero ajeno recibe 403.
+- Solo el comercio ve el PIN de retiro, solo el comprador ve el de entrega y el repartidor no recibe ninguno de los dos. El tercero no consulta la entrega.
+- El cliente no puede suplantar al restaurante para marcar el pedido listo y el repartidor no puede consultar el pago del comprador.
+- El repartidor abre un caso por HTTP. Soporte accede con un rol limitado a `support.manage` y `orders.operate`; un tercero recibe 404 para el caso privado.
+- Al retirar ese rol, el mismo JWT deja de permitir el acceso al pedido y al caso en las solicitudes siguientes.
+- Cerrar la sesión del comprador invalida su token, mientras el restaurante mantiene acceso con su sesión independiente.
+
+Resultado: 13 pruebas de integración MVP aprobadas, cero fallos y cero omitidas, contra PostGIS y Redis de Testcontainers. Evidencia local: `TestResults/mvp-roles.trx`. Código reproducible en `tests/Delivery.Tests/MvpIntegrationTests.cs`.
+
+Esta prueba cubre autenticación, autorización, aislamiento y lecturas HTTP concurrentes. No cubre todavía varios navegadores operando simultáneamente, propagación SignalR en vivo ni reconexión visual. Su seguimiento está en [TODO del MVP](../../TODO.md), fase F1.

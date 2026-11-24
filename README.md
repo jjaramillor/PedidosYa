@@ -5,6 +5,8 @@ Base de una plataforma propia de delivery, en .NET 10, organizada como monolito 
 La revisión del backlog original, los criterios refinados, contratos y estado de pruebas están en [EP-01](docs/epica-1/README.md).
 La implementación de las 44 funcionalidades MVP de la sección 7 se documenta en [Entrega MVP](docs/mvp/README.md), con clientes Angular/Flutter, módulos de comercio y reparto, pagos, liquidaciones y operación. La aceptación completa sigue pendiente de ejecutar integración y validar proveedores y paquetes móviles.
 
+El control de fases, pendientes y aceptación de las 44 funcionalidades está en [TODO del MVP](TODO.md).
+
 ## Ejecutar
 
 Requisitos: SDK .NET 10.0.400 y Docker con motor de contenedores Linux operativo.
