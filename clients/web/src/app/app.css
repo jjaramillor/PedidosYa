@@ -154,6 +154,10 @@ nav button {
 .row label {
   flex: 1;
 }
+.card .row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .location {
   display: flex;
   gap: 16px;

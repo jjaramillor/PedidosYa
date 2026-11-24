@@ -103,3 +103,5 @@ Recorrido simultáneo F1-02 aprobado con sesiones aisladas de cliente, comercio,
 F1-06 completada: el repartidor consultó desde la app reiniciada la resolución guardada por el operador. [Evidencia](validacion-local.md#respuesta-de-soporte-visible-en-android).
 
 Reasignación: privacidad de posiciones anteriores corregida en consultas y eventos; 17 pruebas de integración MVP aprobadas para elegibilidad, permisos, reemplazo previo al retiro y bloqueo posterior. [Evidencia](validacion-local.md#reasignación-y-privacidad-de-ubicación). La aceptación desde las interfaces sigue pendiente en F1-05.
+
+Avance visual F1-04a/F1-05b: comercio ficticio afiliado, suspendido y reactivado; pedido sandbox reasignado antes del retiro desde Administración y cancelado al concluir la prueba. Se corrigieron el desbordamiento de botones y la identificación de repartidores. [Evidencia y pendientes](validacion-local.md#afiliación-y-reasignación-desde-web). Compilación Angular aprobada.

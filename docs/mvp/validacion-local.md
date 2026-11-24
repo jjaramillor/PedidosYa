@@ -119,3 +119,20 @@ Los eventos GPS nuevos incluyen `CourierId`. El consumidor ignora las coordenada
 La aceptación visual de rechazo/reasignación continúa abierta en F1-05. Este avance no cambia pantallas ni requiere un APK nuevo.
 
 Resultado: 17 pruebas de integración MVP aprobadas, cero fallos y cero omitidas. Evidencia local: `TestResults/mvp-reasignacion.trx`. No se repitieron las pruebas Flutter porque este avance solo modifica backend y pruebas de integración.
+
+
+## Afiliación y reasignación desde web
+
+Validación del 23 de noviembre de 2026 en el entorno local sandbox, con cuentas y documentos ficticios.
+
+F1-04a: desde «Mi comercio» se creó «Comercio QA afiliación visual», se adjuntó un PDF sintético y se envió la solicitud. Administración mostró el estado pendiente y permitió aprobar, suspender y aprobar nuevamente, registrando un motivo en cada intervención. La sesión del propietario confirmó el estado final `approved`. No se crearon sucursales ni pedidos bajo este comercio. [Captura del comercio reactivado](comercio-qa-reactivado.jpg).
+
+La descarga documental se intentó desde Administración, pero no se pudo confirmar su finalización con la herramienta del navegador. Esa comprobación y el ciclo equivalente del repartidor permanecen abiertos en F1-04; la carga de un documento no acredita su revisión.
+
+F1-05b: se preparó por API el pedido ficticio `4612be99-91dd-4450-a44e-76cae48f5cb2` por S/32,56, hasta `ready` con oferta aceptada por `courier-41d27e69@mvp.test`. Desde Administración en Chrome se seleccionó como sustituto `courier-7d170163@mvp.test`, se indicó «Reasignación visual QA antes del retiro» y se pulsó «Reasignar». La pantalla mostró «Entrega reasignada». Una consulta de solo lectura confirmó `courier.reassigned` y la nueva asignación en la auditoría. La captura de Chrome no pudo guardarse por un fallo de la herramienta; este paso dispone de observación de interfaz y auditoría, sin imagen.
+
+Se canceló exclusivamente ese fixture desde Administración con el motivo «Cierre del fixture de reasignación visual QA; sin cobro real». La pantalla mostró `cancelled` y la auditoría confirmó `order.cancelled`. Un intento previo de preparación cuya oferta había vencido se canceló mediante la API del propietario. No se modificaron pedidos completados. La preparación por API no se contabiliza como aceptación visual de compra, oferta o retiro.
+
+Dos correcciones surgieron de la validación: los botones de las tarjetas permiten salto de línea para no desbordar su ancho; los repartidores incluyen el correo junto al nombre en Administración y en el selector de reasignación. Antes de la corrección el botón de suspensión excedía el borde de su tarjeta; después, la inspección geométrica no detectó desbordamiento horizontal en las filas revisadas.
+
+La compilación de producción Angular (`npm run build`) pasó con los avisos CommonJS existentes de Leaflet y Mercado Pago. Este avance modifica únicamente presentación web; se conservan las 17 pruebas de integración MVP del avance anterior y no se repitieron ni se recompiló Android. F1-05 conserva pendientes el rechazo desde móvil y el bloqueo posterior al retiro desde interfaz, ya cubiertos por integración.

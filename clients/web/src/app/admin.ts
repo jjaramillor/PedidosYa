@@ -11,7 +11,9 @@ import { Api } from './api';
 })
 export class AdminWorkspace implements OnInit {
   courierName(item: any) {
-    return this.users().find((user) => user.id === item.id)?.displayName || 'Repartidor';
+    const user = this.users().find((user) => user.id === item.id);
+    const name = user?.displayName || 'Repartidor';
+    return user?.email ? `${name} · ${user.email}` : name;
   }
   private api = inject(Api);
   permissions = input<string[]>([]);

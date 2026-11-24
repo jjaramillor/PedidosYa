@@ -38,8 +38,10 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 - [ ] F1-03 Comprobar actualizaciones SignalR y mapa en vivo; reconexión sin estados obsoletos ni filtración entre pedidos.
 - [x] F1-03b Verificar cambios en vivo entre comercio, cliente y Android: aceptación, preparación, retiro, ruta, ETA y cierre. La reconexión visual sigue pendiente. [Evidencia](docs/mvp/validacion-local.md#recorrido-simultáneo-por-interfaces).
 - [x] F1-03a Verificar el transporte SignalR con WebSockets reales de integración: suscripción autorizada, aislamiento de pedidos, baja, resuscripción y eliminación de una sesión cerrada. [Evidencia](docs/mvp/validacion-local.md#tiempo-real-con-websockets).
-- [ ] F1-04 Ejecutar alta/revisión documental, suspensión y reactivación desde sus interfaces.
-- [ ] F1-05 Aceptar/rechazar oferta, probar reasignación antes del retiro y comprobar su bloqueo después del retiro. Reglas verificadas en integración; falta repetir la reasignación desde las interfaces.
+- [ ] F1-04 Ejecutar alta/revisión documental, suspensión y reactivación desde sus interfaces. Pendientes: flujo del repartidor y comprobación de descarga/revisión documental.
+- [x] F1-04a Crear comercio, adjuntar documento ficticio, enviar afiliación, aprobar, suspender y reactivar desde web; propietario confirma estado aprobado. [Evidencia](docs/mvp/validacion-local.md#afiliación-y-reasignación-desde-web).
+- [ ] F1-05 Aceptar/rechazar oferta, probar reasignación antes del retiro y comprobar su bloqueo después del retiro. Reglas verificadas en integración; reasignación previa al retiro comprobada por interfaz. Pendientes: rechazo desde móvil y bloqueo posterior al retiro desde interfaz.
+- [x] F1-05b Reasignar antes del retiro desde Administración y comprobar auditoría; cerrar el pedido ficticio desde la misma interfaz. [Evidencia](docs/mvp/validacion-local.md#afiliación-y-reasignación-desde-web).
 - [x] F1-05a Verificar rechazo y nueva oferta, aceptación concurrente idempotente, reasignación autorizada antes del retiro, revocación del acceso anterior, bloqueo posterior y aislamiento GPS por API/eventos. [Evidencia](docs/mvp/validacion-local.md#reasignación-y-privacidad-de-ubicación).
 - [x] F1-06 Solicitud abierta desde Android, atendida y resuelta por el operador en Chrome, y resolución consultada por el repartidor tras reiniciar la app. [Evidencia](docs/mvp/validacion-local.md#respuesta-de-soporte-visible-en-android).
 
