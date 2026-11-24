@@ -9,6 +9,7 @@ fs.mkdirSync(output, { recursive: true });
 execFileSync(process.execPath, [
   require.resolve('typescript/bin/tsc'),
   path.join(web, 'src/app/tracking-session.ts'),
+  path.join(web, 'src/app/admin-sections.ts'),
   '--target',
   'ES2022',
   '--module',
@@ -177,4 +178,25 @@ test('a failed read does not block later refreshes', async () => {
   await assert.rejects(refresh.request());
   await refresh.request();
   assert.equal(reads, 2);
+});
+
+const { visibleAdminSections } = require(path.join(output, 'admin-sections.js'));
+test('administration only exposes sections authorized by permissions', () => {
+  assert.deepEqual(visibleAdminSections([]), []);
+  assert.deepEqual(
+    visibleAdminSections(['support.manage']).map((x) => x.id),
+    ['support'],
+  );
+  assert.deepEqual(
+    visibleAdminSections(['finance.manage', 'payments.refund']).map((x) => x.id),
+    ['finance'],
+  );
+  assert.deepEqual(
+    visibleAdminSections(['identity.roles.manage']).map((x) => x.id),
+    ['participants'],
+  );
+  assert.deepEqual(
+    visibleAdminSections(['promotions.manage', 'configuration.manage']).map((x) => x.id),
+    ['configuration'],
+  );
 });

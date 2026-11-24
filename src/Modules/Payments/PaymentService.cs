@@ -128,7 +128,7 @@ public sealed class PaymentService(NpgsqlDataSource source,IPaymentGateway gatew
   var list=new List<object>();foreach(var payment in ids)
   {
    var remote=await gateway.GetAsync(payment.Provider,ct);var local=await InfoAsync(payment.Order,ct);var simulated=options.Value.Provider=="sandbox";
-   var matches=!simulated&&local.State==remote.State&&local.Amount==remote.Amount&&local.Captured==remote.Captured&&local.Refunded==remote.Refunded&&local.Currency==remote.Currency&&remote.OrderId==payment.Order;
+   var matches=!simulated&&remote.Id==payment.Provider&&local.State==remote.State&&local.Amount==remote.Amount&&local.Captured==remote.Captured&&local.Refunded==remote.Refunded&&local.Currency==remote.Currency&&remote.OrderId==payment.Order;
    await ExecuteAsync(db,null,"INSERT INTO payments.reconciliations(id,payment_id,local_state,provider_state,matches,local_amount,provider_amount,local_refunded,provider_refunded) VALUES (@id,@payment,@local,@remote,@matches,@amount,@remoteAmount,@refunded,@remoteRefunded)",ct,("id",Guid.CreateVersion7()),("payment",payment.Id),("local",local.State),("remote",simulated?"simulated":remote.State),("matches",matches),("amount",local.Amount),("remoteAmount",remote.Amount),("refunded",local.Refunded),("remoteRefunded",remote.Refunded));
    list.Add(new{PaymentId=payment.Id,Local=local.State,Remote=remote.State,Matches=matches,Simulated=simulated,LocalAmount=local.Amount,ProviderAmount=remote.Amount,LocalRefunded=local.Refunded,ProviderRefunded=remote.Refunded});
   }

@@ -388,3 +388,7 @@ summary:focus-visible {
   color: #73511b;
   background: #fbefda;
 }
+
+.admin-nav {
+  flex-wrap: wrap;
+}

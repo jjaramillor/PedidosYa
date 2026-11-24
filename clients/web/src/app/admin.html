@@ -1,4 +1,27 @@
-<h1>Operación de la plataforma</h1>
+<div class="section-heading workspace-heading">
+  <div>
+    <p class="eyebrow">CENTRO DE OPERACIONES</p>
+    <h1>Operación de la plataforma</h1>
+    <p>{{ sectionDescription() }}</p>
+  </div>
+  <button class="secondary" [disabled]="busy()" (click)="run(reload.bind(this))">
+    Actualizar operación
+  </button>
+</div>
+<nav class="workspace-nav admin-nav" aria-label="Áreas de administración">
+  @for (item of sections(); track item.id) {
+    <button
+      [class.nav-active]="section() === item.id"
+      [attr.aria-current]="section() === item.id ? 'page' : null"
+      (click)="section.set(item.id)"
+    >
+      {{ item.label }}
+    </button>
+  }
+</nav>
+@if (!sections().length) {
+  <p class="notice">Tu cuenta no tiene áreas de administración disponibles.</p>
+}
 @if (error()) {
   <p class="error" role="alert">{{ error() }}</p>
 }
@@ -11,10 +34,10 @@
 <label
   >Motivo de los cambios<input
     [(ngModel)]="reason"
-    placeholder="Describe por qué se realiza la intervención" /></label
-><button (click)="run(reload.bind(this))">Actualizar operación</button>
+    placeholder="Describe por qué se realiza la intervención"
+/></label>
 @if (can('participants.manage')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'participants'">
     <h2>Participantes</h2>
     <div class="grid">
       @for (item of merchants(); track item.id) {
@@ -66,7 +89,7 @@
   </section>
 }
 @if (can('identity.users.manage')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'participants'">
     <h2>Cuentas de usuario</h2>
     <label>Buscar por nombre o correo<input [(ngModel)]="userSearch" /></label
     ><button (click)="run(searchUsers.bind(this))">Buscar</button>
@@ -86,7 +109,7 @@
   </section>
 }
 @if (can('configuration.manage')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'configuration'">
     <h2>Zonas, tarifas y comisiones</h2>
     @for (item of zones(); track item.id) {
       <button class="secondary" (click)="editZone(item)">{{ item.configuration.name }}</button>
@@ -190,7 +213,7 @@
   </section>
 }
 @if (can('promotions.manage')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'configuration'">
     <h2>Crear cupón</h2>
     <form (ngSubmit)="run(saveCoupon.bind(this))">
       <label>Código<input name="code" required [(ngModel)]="coupon.code" /></label>
@@ -251,7 +274,7 @@
   </section>
 }
 @if (can('orders.operate')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'orders'">
     <h2>Monitoreo e intervención</h2>
     <div class="grid">
       @for (item of orders(); track item.id) {
@@ -296,7 +319,7 @@
   </section>
 }
 @if (can('support.manage')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'support'">
     <h2>Soporte y SLA</h2>
     @for (item of cases(); track item.id) {
       <p>
@@ -336,7 +359,7 @@
   </section>
 }
 @if (can('finance.manage')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'finance'">
     <h2>Finanzas</h2>
     <button (click)="run(reconcile.bind(this))">Conciliar pagos</button>
     @for (item of reconciliation(); track item.paymentId) {
@@ -396,7 +419,7 @@
   </section>
 }
 @if (can('platform.audit.read')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'audit'">
     <h2>Auditoría</h2>
     @for (item of audit(); track item.id) {
       <p>
@@ -408,7 +431,7 @@
 }
 
 @if (can('identity.roles.manage')) {
-  <section class="panel">
+  <section class="panel" [hidden]="section() !== 'participants'">
     <h2>Roles y permisos</h2>
     <button (click)="run(loadRoles.bind(this))">Consultar roles</button>
     @for (item of roles(); track item.id) {

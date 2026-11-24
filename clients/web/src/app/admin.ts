@@ -2,6 +2,7 @@ import { Component, inject, input, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Api } from './api';
+import { visibleAdminSections } from './admin-sections';
 
 @Component({
   selector: 'admin-workspace',
@@ -10,6 +11,14 @@ import { Api } from './api';
   styleUrl: './app.css',
 })
 export class AdminWorkspace implements OnInit {
+  section = signal('orders');
+  sections() {
+    return visibleAdminSections(this.permissions());
+  }
+  sectionDescription() {
+    return this.sections().find((section) => section.id === this.section())?.description || '';
+  }
+
   courierName(item: any) {
     const user = this.users().find((user) => user.id === item.id);
     const name = user?.displayName || 'Repartidor';
@@ -79,6 +88,8 @@ export class AdminWorkspace implements OnInit {
     );
   }
   async ngOnInit() {
+    if (!this.sections().some((section) => section.id === this.section()))
+      this.section.set(this.sections()[0]?.id || '');
     await this.run(this.reload.bind(this));
   }
   async run(work: () => Promise<void>) {
@@ -104,7 +115,7 @@ export class AdminWorkspace implements OnInit {
       this.zones.set(await this.api.call('/admin/zones'));
       this.parameters.set(await this.api.call('/admin/parameters'));
     }
-    if(this.can('platform.audit.read'))this.audit.set(await this.api.call('/admin/audit'));
+    if (this.can('platform.audit.read')) this.audit.set(await this.api.call('/admin/audit'));
     if (this.can('support.manage')) this.cases.set(await this.api.call('/support/cases'));
   }
   private requiredReason() {

@@ -195,3 +195,32 @@ Prueba visual contra la API local, usando exclusivamente el pedido ficticio canc
 La API quedó ejecutándose con el mismo entorno local de validación y disponibilidad comprobada. No se editaron pedidos ni posiciones. Evidencia: [reconectando](seguimiento-reconectando.jpg) y [recuperado](seguimiento-recuperado.jpg). El mapa conserva la dirección sintética del fixture; este ensayo no demuestra un movimiento GPS ni un cambio de estado ocurrido durante la desconexión. Esa comprobación permanece abierta en F1-03.
 
 Validación automatizada: `npm run test:tracking`, ocho pruebas aprobadas, cubriendo resuscripción/lectura tras reconectar, recuperación manual, fallo inicial, aislamiento de conexiones anteriores, rechazo de suscripción, cierre durante creación, eventos durante lectura y recuperación tras fallo de lectura. El ejecutor usa TypeScript y Node ya instalados, sin dependencias nuevas. `npm run build` aprobado; se mantienen los avisos CommonJS existentes de Leaflet y Mercado Pago. No cambió el backend ni Flutter y no se repitieron sus suites.
+
+
+## Administración por áreas
+
+UX-03 completada el 23 de noviembre de 2026. Administración ahora separa Pedidos, Participantes, Soporte, Finanzas, Configuración y Auditoría. La descripción y la pestaña activa identifican la tarea actual. El campo de motivo se conserva junto a la navegación y no se pierden formularios al cambiar de área. Las secciones autorizadas se calculan desde los permisos existentes: una cuenta solo de soporte abre Soporte; una cuenta sin permisos no recibe áreas. Los controles del backend mantienen su autorización independiente.
+
+Se recorrieron las seis áreas desde Chrome con la cuenta administradora ficticia existente; Finanzas y Auditoría se comprobaron con su contenido visible. No se ejecutaron cambios de participantes, reembolsos ni liquidaciones desde esa sesión. [Captura de Finanzas](admin-finanzas-separadas.jpg). Una captura posterior de Chrome falló por la herramienta, pero la captura adjunta sí se guardó y se inspeccionó.
+
+`npm run test:tracking` aprobó nueve pruebas: las ocho regresiones del seguimiento y una nueva de visibilidad por permisos para administración. `npm run build` aprobado, con los avisos CommonJS existentes. Este avance no constituye una auditoría completa de accesibilidad ni aceptación en tablet.
+
+## Reembolsos tras captura
+
+F2-01 completada en integración local el 23 de noviembre de 2026. Se prepara y completa una entrega con tarjeta sandbox, captura y distribución financiera. Una devolución parcial de 100 unidades menores se solicita simultáneamente dos veces con la misma clave: queda un único reembolso, una auditoría y un asiento. Reutilizar esa clave con otro importe se rechaza. Repetir directamente el consumo contable de la operación no duplica el asiento.
+
+Se devuelve el remanente con una segunda clave, se repite y se drena Outbox más de una vez. El pago queda `refunded`, el total devuelto coincide con lo capturado, hay dos reembolsos y dos auditorías. Las sumas por cuenta quedan en cero: se revierte completamente la distribución de esa entrega. Una devolución adicional de una unidad menor se rechaza y no genera registros financieros nuevos.
+
+Las pruebas usan PostGIS y Redis aislados en Testcontainers, con datos sintéticos. No se devuelve dinero real ni se modifican pedidos locales de demostración. La validación por interfaz y los permisos funcionales específicos de Finanzas/Soporte siguen en F2-02; el ensayo no reproduce una respuesta perdida dentro de una pasarela real.
+
+## Conciliación y notificaciones duplicadas
+
+F2-03 completada como validación de integración el 23 de noviembre de 2026. Nueve escenarios comparan un pago capturado con una instantánea de proveedor: coincidencia completa y diferencias de estado, monto, capturado, devuelto, moneda, pedido e identificador del pago; además del modo sandbox. Se corrigió la comparación para exigir también coincidencia del identificador remoto con el identificador almacenado.
+
+Cada escenario se concilia dos veces: se conservan dos comprobaciones históricas, sin duplicar ni modificar dinero, asientos o reembolsos. Sandbox informa `Simulated=true`, nunca `Matches=true`, y registra `provider_state='simulated'` aunque los valores coincidan. Un cliente sin permiso financiero recibe 403.
+
+Dos escenarios adicionales envían tres notificaciones firmadas concurrentes de un pago ya capturado, con estado remoto `captured` o un estado `authorized` tardío. No revierten el pago ni generan nuevos mensajes Outbox, asientos o reembolsos. Las firmas usan una clave de fixture. El adaptador solo entrega instantáneas y rechaza operaciones financieras; no realiza solicitudes de red a Mercado Pago. Las opciones del proveedor real se usan únicamente para recorrer la rama de comparación no simulada en ese adaptador: no acreditan integración bancaria real.
+
+Resultado final de estas validaciones: 29 pruebas de integración MVP aprobadas, cero fallos y cero omitidas. Reporte: `TestResults/finance-refund-reconcile.trx`. El log local es `D:/Development/PedidosYa/temp/finance-refund-reconcile.log`. Los webhooks iniciales y las credenciales reales del proveedor requieren la validación del entorno piloto F4-04. Flutter no cambió y no se recompiló el APK en este avance.
+
+La API local se actualizó con el binario Release ya validado, manteniendo el entorno Development con sandbox y los volúmenes privados existentes. `/health/ready` devolvió 200 después del reinicio.

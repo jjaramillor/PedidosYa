@@ -52,15 +52,15 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 
 - [x] UX-01 Primera etapa minimalista: portada gastronómica, búsqueda simplificada, filtros desplegables y navegación activa; comercio separado en Pedidos, Carta y Configuración, con estados y filtros por etapa. Compilación y comprobación visual en escritorio y ancho móvil de 390 px. [Evidencia](docs/mvp/validacion-local.md#primera-etapa-de-ui-y-ux).
 - [ ] UX-02 Extender la presentación al carrito, checkout y seguimiento; verificar compra completa con el nuevo diseño.
-- [ ] UX-03 Separar áreas de Administración; la primera adaptación del repartidor está completada en UX-05.
+- [x] UX-03 Separar Administración en Pedidos, Participantes, Soporte, Finanzas, Configuración y Auditoría, filtradas por permisos; navegación comprobada por interfaz y prueba de permisos aprobada. [Evidencia](docs/mvp/validacion-local.md#administración-por-áreas).
 - [x] UX-05 Aplicar base visual minimalista en Flutter y separar navegación de cliente (Explorar/Carrito/Pedidos) y repartidor (Entregas/Ganancias/Perfil); análisis y 20 pruebas aprobadas, APK instalado y navegación revisada en el emulador. [Evidencia](docs/mvp/validacion-local.md#presentación-minimalista-en-la-app-flutter).
 - [ ] UX-04 Incorporar fotografías propias de los comercios, revisar accesibilidad integral y validar con usuarios del piloto.
 
 ## F2 Finanzas y compensaciones
 
-- [ ] F2-01 Probar devolución tras un pago ya capturado, con reintentos y auditoría.
+- [x] F2-01 Probar devolución parcial y total tras captura sandbox, reintentos concurrentes, auditoría única, conflicto de clave y reversión contable sin duplicados. [Evidencia](docs/mvp/validacion-local.md#reembolsos-tras-captura).
 - [ ] F2-02 Verificar reembolso parcial y total por interfaz, límite de devolución y permisos de Finanzas/Soporte.
-- [ ] F2-03 Probar conciliación con discrepancias y registros duplicados; distinguir sandbox de proveedor real.
+- [x] F2-03 Probar conciliación con discrepancias, consultas repetidas y webhooks duplicados/tardíos mediante adaptador de pruebas; sandbox nunca se presenta como verificación bancaria. La pasarela real continúa en F4-04. [Evidencia](docs/mvp/validacion-local.md#conciliación-y-notificaciones-duplicadas).
 - [ ] F2-04 Ejecutar rendición de efectivo, cierre de liquidación y registro de pago con referencia externa, sin duplicar asientos.
 - [ ] F2-05 Validar reparto de descuentos, cupones, comisión, incentivos y ajustes de una liquidación ya cerrada.
 - [ ] F2-06 Acordar tratamiento de impuestos, comprobantes y procedimiento de transferencia; un registro manual no ejecuta un pago bancario.

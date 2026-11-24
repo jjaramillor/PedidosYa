@@ -432,4 +432,129 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         var address=await fixture.Client.PostAsJsonAsync("/api/v1/addresses",new SaveAddress("Home","Street","",new(-12,-77)));
         Assert.Equal(HttpStatusCode.OK,address.StatusCode);
     }
+    private async Task<DeliveryScenario> CompleteCardDelivery()
+    {
+        var scenario = await PrepareDelivery("card");
+        await StartRoute(scenario);
+        var pin = (await Service<DeliveryService>().GetAsync(CallerFor(scenario.Customer), scenario.Order.Id, Ct)).DeliveryPin;
+        await Service<DeliveryService>().ActionAsync(scenario.Courier, scenario.Order.Id,
+            new(Guid.NewGuid(), "delivered", pin, null, "financial fixture delivery"), Ct);
+        await Drain();
+        return scenario;
+    }
+
+    [Fact]
+    public async Task Captured_payment_refunds_are_idempotent_audited_and_fully_reverse_distribution()
+    {
+        var s = await CompleteCardDelivery();
+        var payments = Service<PaymentService>();
+        Assert.Equal(s.Quote.Total, (await payments.InfoAsync(s.Order.Id, Ct)).Captured);
+        var partial = new RefundInput(Guid.NewGuid(), 100, "partial captured refund QA");
+        await Task.WhenAll(payments.RefundAsync(s.Admin, s.Order.Id, partial, Ct), payments.RefundAsync(s.Admin, s.Order.Id, partial, Ct));
+        await Drain();
+        Assert.Equal(100, (await payments.InfoAsync(s.Order.Id, Ct)).Refunded);
+        Assert.Equal(1, await fixture.CountAsync("SELECT count(*) FROM payments.refunds"));
+        Assert.Equal(1, await fixture.CountAsync("SELECT count(*) FROM platform.audit WHERE action='payment.refunded' AND reason='partial captured refund QA'"));
+        var conflict = await Assert.ThrowsAsync<ApiException>(() => payments.RefundAsync(s.Admin, s.Order.Id, partial with { Amount = 101 }, Ct));
+        Assert.Equal("refund_key_conflict", conflict.Code);
+        await Service<LedgerService>().RefundAsync(s.Order, 100, partial.OperationId, Ct);
+        Assert.Equal(1, await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers WHERE kind='refund'"));
+        var remaining = new RefundInput(Guid.NewGuid(), s.Quote.Total - 100, "remaining captured refund QA");
+        await payments.RefundAsync(s.Admin, s.Order.Id, remaining, Ct);
+        await payments.RefundAsync(s.Admin, s.Order.Id, remaining, Ct);
+        await Drain(); await Drain();
+        var info = await payments.InfoAsync(s.Order.Id, Ct);
+        Assert.Equal("refunded", info.State); Assert.Equal(info.Captured, info.Refunded);
+        Assert.Equal(2, await fixture.CountAsync("SELECT count(*) FROM payments.refunds"));
+        Assert.Equal(2, await fixture.CountAsync("SELECT count(*) FROM platform.audit WHERE action='payment.refunded'"));
+        Assert.Equal(2, await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers WHERE kind='refund'"));
+        Assert.Equal(0, await fixture.CountAsync("SELECT count(*) FROM (SELECT account FROM ledger.lines GROUP BY account HAVING sum(amount)<>0) nonzero"));
+        var excess = await Assert.ThrowsAsync<ApiException>(() => payments.RefundAsync(s.Admin, s.Order.Id, new(Guid.NewGuid(), 1, "excess QA"), Ct));
+        Assert.Equal("refund_exceeds_capture", excess.Code);
+        Assert.Equal(2, await fixture.CountAsync("SELECT count(*) FROM payments.refunds"));
+    }
+
+    [Theory]
+    [InlineData("match", true)]
+    [InlineData("state", false)]
+    [InlineData("amount", false)]
+    [InlineData("captured", false)]
+    [InlineData("refunded", false)]
+    [InlineData("currency", false)]
+    [InlineData("order", false)]
+    [InlineData("provider", false)]
+    [InlineData("sandbox", false)]
+    public async Task Reconciliation_detects_discrepancies_and_repeated_checks_do_not_post_money(string difference, bool matches)
+    {
+        var s = await CompleteCardDelivery();
+        var info = await Service<PaymentService>().InfoAsync(s.Order.Id, Ct);
+        await using var query = fixture.Source.CreateCommand("SELECT provider_id FROM payments.payments WHERE order_id=@order");
+        query.Parameters.AddWithValue("order", s.Order.Id);
+        var providerId = (string)(await query.ExecuteScalarAsync())!;
+        var remote = new GatewayPayment(providerId, info.State, null, info.Captured, info.Currency, info.Amount, s.Order.Id, info.Refunded);
+        remote = difference switch {
+            "state" => remote with { State = "authorized" }, "amount" => remote with { Amount = info.Amount + 1 },
+            "captured" => remote with { Captured = info.Captured - 1 }, "refunded" => remote with { Refunded = 1 },
+            "currency" => remote with { Currency = "USD" }, "order" => remote with { OrderId = Guid.NewGuid() },
+            "provider" => remote with { Id = "different-provider-record" }, _ => remote
+        };
+        // Injected snapshot adapter: no real Mercado Pago or other financial request is made.
+        var payments = new PaymentService(fixture.Source, new SnapshotGateway(remote), Service<IIdentityDirectory>(),
+            Service<ICoverageDirectory>(), Microsoft.Extensions.Options.Options.Create(new PaymentOptions { Provider = difference == "sandbox" ? "sandbox" : "mercadopago" }));
+        var vouchers = await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers");
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            var results = await payments.ReconcileAsync(s.Admin, Ct);
+            var result = System.Text.Json.JsonSerializer.SerializeToElement(Assert.Single(results));
+            Assert.Equal(matches, result.GetProperty("Matches").GetBoolean());
+            Assert.Equal(difference == "sandbox", result.GetProperty("Simulated").GetBoolean());
+        }
+        Assert.Equal(2, await fixture.CountAsync("SELECT count(*) FROM payments.reconciliations"));
+        Assert.Equal(matches ? 2 : 0, await fixture.CountAsync("SELECT count(*) FROM payments.reconciliations WHERE matches"));
+        if (difference == "sandbox") Assert.Equal(2, await fixture.CountAsync("SELECT count(*) FROM payments.reconciliations WHERE provider_state='simulated'"));
+        Assert.Equal(vouchers, await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers"));
+        Assert.Equal(0, await fixture.CountAsync("SELECT count(*) FROM payments.refunds"));
+        Assert.Equal(info, await Service<PaymentService>().InfoAsync(s.Order.Id, Ct));
+        var denied = await Assert.ThrowsAsync<ApiException>(() => payments.ReconcileAsync(CallerFor(s.Customer), Ct));
+        Assert.Equal(403, denied.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("captured")]
+    [InlineData("authorized")]
+    public async Task Duplicate_or_stale_signed_webhooks_do_not_change_a_captured_payment_or_ledger(string remoteState)
+    {
+        var s = await CompleteCardDelivery();
+        var info = await Service<PaymentService>().InfoAsync(s.Order.Id, Ct);
+        await using var query = fixture.Source.CreateCommand("SELECT provider_id FROM payments.payments WHERE order_id=@order");
+        query.Parameters.AddWithValue("order", s.Order.Id);
+        var providerId = (string)(await query.ExecuteScalarAsync())!;
+        const string secret = "automated-fixture-secret";
+        const string requestId = "duplicate-payment-fixture";
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var manifest = $"id:{providerId.ToLowerInvariant()};request-id:{requestId};ts:{timestamp};";
+        var digest = Convert.ToHexString(System.Security.Cryptography.HMACSHA256.HashData(System.Text.Encoding.UTF8.GetBytes(secret), System.Text.Encoding.UTF8.GetBytes(manifest)));
+        var signature = $"ts={timestamp},v1={digest}";
+        var remote = new GatewayPayment(providerId, remoteState, null, remoteState == "captured" ? info.Captured : 0, info.Currency, info.Amount, s.Order.Id);
+        var payments = new PaymentService(fixture.Source, new SnapshotGateway(remote), Service<IIdentityDirectory>(),
+            Service<ICoverageDirectory>(), Microsoft.Extensions.Options.Options.Create(new PaymentOptions { Provider = "mercadopago", WebhookSecret = secret }));
+        var vouchers = await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers");
+        var messages = await fixture.CountAsync("SELECT count(*) FROM platform.outbox");
+        await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => payments.WebhookAsync(providerId, requestId, signature, Ct)));
+        await Drain();
+        Assert.Equal(info, await Service<PaymentService>().InfoAsync(s.Order.Id, Ct));
+        Assert.Equal(vouchers, await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers"));
+        Assert.Equal(messages, await fixture.CountAsync("SELECT count(*) FROM platform.outbox"));
+        Assert.Equal(0, await fixture.CountAsync("SELECT count(*) FROM payments.refunds"));
+    }
+
+    private sealed class SnapshotGateway(GatewayPayment snapshot) : IPaymentGateway
+    {
+        public Task<GatewayPayment> GetAsync(string id, CancellationToken ct) => Task.FromResult(snapshot);
+        public Task<GatewayPayment> CreateAsync(Guid order, long amount, string currency, string email, CardToken token, CancellationToken ct) => throw new NotSupportedException();
+        public Task CaptureAsync(string id, Guid operation, CancellationToken ct) => throw new NotSupportedException();
+        public Task CancelAsync(string id, Guid operation, CancellationToken ct) => throw new NotSupportedException();
+        public Task RefundAsync(string id, long amount, Guid operation, CancellationToken ct) => throw new NotSupportedException();
+    }
+
 }
