@@ -1,8 +1,9 @@
-import { Component, inject, input, OnInit, signal } from '@angular/core';
+import { Component, inject, input, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Api } from './api';
-import { visibleAdminSections } from './admin-sections';
+import { RefundIntent } from './refund-intent';
+import { visibleAdminSections, canDeleteCustomRole, AdminRole } from './admin-sections';
 
 @Component({
   selector: 'admin-workspace',
@@ -10,7 +11,7 @@ import { visibleAdminSections } from './admin-sections';
   templateUrl: './admin.html',
   styleUrl: './app.css',
 })
-export class AdminWorkspace implements OnInit {
+export class AdminWorkspace implements OnInit, OnDestroy {
   section = signal('orders');
   sections() {
     return visibleAdminSections(this.permissions());
@@ -42,6 +43,14 @@ export class AdminWorkspace implements OnInit {
   selectedOrder = signal<any>(null);
   selectedCase = signal<any>(null);
   refundAmount = 0;
+  payment = signal<any>(null);
+  private refundIntent = new RefundIntent(() => crypto.randomUUID());
+  documentPreview = signal<{ url: string; name: string } | null>(null);
+  closeDocument() {
+    const current = this.documentPreview();
+    if (current) URL.revokeObjectURL(current.url);
+    this.documentPreview.set(null);
+  }
   resolution = '';
   caseState = 'investigating';
   zoneId = '';
@@ -86,6 +95,9 @@ export class AdminWorkspace implements OnInit {
     return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(
       value / 100,
     );
+  }
+  ngOnDestroy() {
+    this.closeDocument();
   }
   async ngOnInit() {
     if (!this.sections().some((section) => section.id === this.section()))
@@ -142,12 +154,21 @@ export class AdminWorkspace implements OnInit {
   async document(id: string) {
     const response = await fetch('/api/v1/documents/' + id, { credentials: 'same-origin' });
     if (!response.ok) throw new Error('Documento no disponible.');
-    const url = URL.createObjectURL(await response.blob());
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    this.closeDocument();
+    if (['image/png', 'image/jpeg'].includes(blob.type)) {
+      this.documentPreview.set({ url, name: 'Documento de afiliación' });
+      return;
+    }
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'documento';
+    anchor.download = 'documento-afiliacion.pdf';
+    document.body.append(anchor);
     anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    this.notice.set('Documento preparado para descarga.');
   }
   editZone(item: any) {
     this.zoneId = item.id;
@@ -211,6 +232,8 @@ export class AdminWorkspace implements OnInit {
   }
   async openOrder(id: string) {
     this.selectedOrder.set(await this.api.call('/orders/' + id));
+    this.payment.set(null);
+    if (this.can('finance.manage') || this.can('payments.refund')) await this.loadPayment(id);
   }
   async cancel() {
     await this.api.call('/orders/' + this.selectedOrder().id + '/actions', 'POST', {
@@ -228,13 +251,27 @@ export class AdminWorkspace implements OnInit {
     });
     this.notice.set('Entrega reasignada.');
   }
+  async loadPayment(id: string) {
+    this.payment.set(await this.api.call('/orders/' + id + '/payment'));
+  }
   async refund() {
-    await this.api.call('/admin/orders/' + this.selectedOrder().id + '/refunds', 'POST', {
-      operationId: crypto.randomUUID(),
-      amount: Math.round(this.refundAmount * 100),
-      reason: this.requiredReason(),
-    });
+    const id = this.selectedOrder().id;
+    const amount = Math.round(this.refundAmount * 100);
+    const reason = this.requiredReason();
+    if (!Number.isSafeInteger(amount) || amount <= 0)
+      throw new Error('Indica un importe de devolución mayor que cero.');
+    if (this.payment()?.orderId !== id) await this.loadPayment(id);
+    if (amount > this.payment().captured - this.payment().refunded)
+      throw new Error('La devolución supera el cobro disponible.');
+    await this.api.call(
+      '/admin/orders/' + id + '/refunds',
+      'POST',
+      this.refundIntent.payload(id, amount, reason),
+    );
+    this.refundIntent.complete();
+    this.refundAmount = 0;
     this.notice.set('Reembolso registrado.');
+    await this.loadPayment(id);
   }
   async reconcile() {
     this.reconciliation.set(await this.api.call('/admin/payments/reconcile', 'POST', {}));
@@ -290,8 +327,9 @@ export class AdminWorkspace implements OnInit {
     });
     await this.report();
   }
-  roles = signal<any[]>([]);
+  roles = signal<AdminRole[]>([]);
   rolePermissions = signal<string[]>([]);
+  roleDeleteConfirmation = '';
   roleId = '';
   roleName = '';
   roleSelection: Record<string, boolean> = {};
@@ -309,12 +347,34 @@ export class AdminWorkspace implements OnInit {
       item.permissions.map((permission: string) => [permission, true]),
     );
   }
+  newRole() {
+    this.roleId = '';
+    this.roleName = '';
+    this.roleSelection = {};
+    this.roleDeleteConfirmation = '';
+  }
+  isSystemRole() {
+    return this.roles().some((role) => role.id === this.roleId && role.systemRole);
+  }
+  canDeleteRole() {
+    return canDeleteCustomRole(this.roles(), this.roleId);
+  }
+  async deleteRole() {
+    if (!this.canDeleteRole() || this.roleDeleteConfirmation !== this.roleId)
+      throw new Error('Confirma el código de un rol personalizado.');
+    await this.api.call('/identity/admin/roles/' + encodeURIComponent(this.roleId), 'DELETE');
+    this.newRole();
+    await this.loadRoles();
+    this.notice.set('Rol eliminado.');
+  }
   async saveRole() {
+    if (this.isSystemRole()) throw new Error('Los roles del sistema no se editan.');
     await this.api.call('/identity/admin/roles/' + encodeURIComponent(this.roleId), 'PUT', {
       name: this.roleName,
       permissions: this.rolePermissions().filter((p) => this.roleSelection[p]),
     });
     await this.loadRoles();
+    this.notice.set('Rol guardado.');
   }
   async loadAssignments() {
     const roles = await this.api.call('/identity/admin/users/' + this.roleUser + '/roles');

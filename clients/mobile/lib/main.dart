@@ -57,6 +57,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   bool cashCollected = false;
   bool supportRequested = false;
   String? supportMessage;
+  String? applicationMessage;
   String vehicle = 'bicycle';
   final documents = <String>[];
   String? evidence;
@@ -78,6 +79,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   Future<void> apply() async {
     await api.call('/couriers/apply',
         method: 'POST', body: {'vehicle': vehicle, 'documentIds': documents});
+    applicationMessage = 'Solicitud enviada al equipo de operación.';
   }
 
   Future<void> report() async {
@@ -516,6 +518,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                 if (authenticated) ...[
                   if (order == null) ...[
                     if (destination == 2) ...[
+                      if (applicationMessage != null) Text(applicationMessage!),
                       const SectionTitle('Tu perfil',
                           subtitle:
                               'Afiliación y acceso al espacio de cliente.'),

@@ -41,3 +41,13 @@ export function visibleAdminSections(permissions: readonly string[]) {
     section.permissions.some((permission) => permissions.includes(permission)),
   );
 }
+
+export interface AdminRole {
+  id: string;
+  name: string;
+  permissions: string[];
+  systemRole: boolean;
+}
+export function canDeleteCustomRole(roles: readonly AdminRole[], id: string) {
+  return roles.some((role) => role.id === id && !role.systemRole);
+}

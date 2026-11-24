@@ -336,73 +336,135 @@
     }
   }
   @if (tab() === 'cart') {
-    <section class="panel narrow">
-      <h1>Tu carrito</h1>
-      @for (item of basket(); track $index) {
-        <div class="cart-line">
-          <span>{{ item.quantity }} × {{ item.name }}</span
-          ><strong>{{ money(item.unitPrice * item.quantity) }}</strong
-          ><button class="secondary" (click)="run(removeLine.bind(this, $index))">Quitar</button>
+    <section class="checkout-shell">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">A UN PASO DE ALGO RICO</p>
+          <h1>Tu carrito</h1>
+          <p>Revisa tus productos y elige dónde recibirlos.</p>
         </div>
-      } @empty {
-        <p>Elige algo de la carta para comenzar.</p>
-      }
-      @if (basket().length) {
-        <label
-          >Dirección<select [(ngModel)]="addressId" (change)="selectAddress()">
-            @for (item of addresses(); track item.id) {
-              <option [value]="item.id">{{ item.label }} — {{ item.street }}</option>
+        <button class="secondary" (click)="tab.set('explore')">Seguir explorando</button>
+      </div>
+      <ol class="checkout-steps" aria-label="Pasos del pedido">
+        <li>1 · Tus productos</li>
+        <li>2 · Entrega</li>
+        <li [class.step-ready]="quote()">3 · Confirmación</li>
+      </ol>
+      @if (!basket().length) {
+        <div class="empty-state">
+          <h2>Tu próxima comida empieza aquí</h2>
+          <p>Elige algo de la carta para comenzar.</p>
+          <button (click)="tab.set('explore')">Explorar restaurantes</button>
+        </div>
+      } @else {
+        <div class="checkout-layout">
+          <section class="panel checkout-items">
+            <h2>Lo que elegiste</h2>
+            @for (item of basket(); track $index) {
+              <div class="cart-line">
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <p>{{ item.quantity }} {{ item.quantity === 1 ? 'unidad' : 'unidades' }}</p>
+                </div>
+                <strong>{{ money(item.unitPrice * item.quantity) }}</strong
+                ><button
+                  class="secondary"
+                  [disabled]="busy()"
+                  (click)="run(removeLine.bind(this, $index))"
+                  [attr.aria-label]="'Quitar ' + item.name"
+                >
+                  Quitar
+                </button>
+              </div>
             }
-          </select></label
-        ><label>Cupón<input [(ngModel)]="coupon" (ngModelChange)="quote.set(null)" /></label
-        ><label
-          >Propina (S/)<input
-            type="number"
-            min="0"
-            [(ngModel)]="tip"
-            (ngModelChange)="quote.set(null)" /></label
-        ><button (click)="run(calculate.bind(this))" [disabled]="busy()">Calcular total</button>
-        @if (quote()) {
-          <dl>
-            <dt>Productos</dt>
-            <dd>{{ money(quote().subtotal) }}</dd>
-            <dt>Descuento</dt>
-            <dd>−{{ money(quote().discount) }}</dd>
-            <dt>Entrega</dt>
-            <dd>{{ money(quote().delivery) }}</dd>
-            <dt>Servicio</dt>
-            <dd>{{ money(quote().service) }}</dd>
-            <dt>Propina</dt>
-            <dd>{{ money(quote().tip) }}</dd>
-            <dt>Total</dt>
-            <dd>
-              <strong>{{ money(quote().total) }}</strong>
-            </dd>
-          </dl>
-          <p>Precios válidos hasta {{ quote().expiresAt | date: 'shortTime' }}.</p>
-          <label
-            >Medio de pago<select [(ngModel)]="method">
-              <option value="cash">Efectivo (sujeto a disponibilidad)</option>
-              @if (paymentSettings.provider === 'sandbox') {
-                <option value="card">Tarjeta de prueba — sin cobro real</option>
+            <h2>¿Dónde lo recibes?</h2>
+            <label
+              >Dirección<select [(ngModel)]="addressId" (change)="selectAddress()">
+                @for (item of addresses(); track item.id) {
+                  <option [value]="item.id">{{ item.label }} — {{ item.street }}</option>
+                }
+              </select></label
+            >
+            @if (!addresses().length) {
+              <p>Añade una dirección para continuar.</p>
+              <button class="secondary" (click)="tab.set('account')">Añadir dirección</button>
+            }
+            <div class="row">
+              <label
+                >Cupón<input
+                  [(ngModel)]="coupon"
+                  (ngModelChange)="quote.set(null)"
+                  placeholder="Si tienes uno" /></label
+              ><label
+                >Propina (S/)<input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [(ngModel)]="tip"
+                  (ngModelChange)="quote.set(null)"
+              /></label>
+            </div>
+            <button (click)="run(calculate.bind(this))" [disabled]="busy() || !addressId">
+              Calcular total
+            </button>
+          </section>
+          <aside class="panel checkout-summary" aria-label="Resumen de tu pedido">
+            <p class="eyebrow">SIN SORPRESAS</p>
+            <h2>Resumen del pedido</h2>
+            @if (quote()) {
+              <dl>
+                <dt>Productos</dt>
+                <dd>{{ money(quote().subtotal) }}</dd>
+                <dt>Descuento</dt>
+                <dd>−{{ money(quote().discount) }}</dd>
+                <dt>Entrega</dt>
+                <dd>{{ money(quote().delivery) }}</dd>
+                <dt>Servicio</dt>
+                <dd>{{ money(quote().service) }}</dd>
+                <dt>Propina</dt>
+                <dd>{{ money(quote().tip) }}</dd>
+                <dt class="checkout-total">Total</dt>
+                <dd class="checkout-total">{{ money(quote().total) }}</dd>
+              </dl>
+              <p class="checkout-hint">
+                Precios válidos hasta {{ quote().expiresAt | date: 'shortTime' }}.
+              </p>
+              <label
+                >Medio de pago<select [(ngModel)]="method">
+                  <option value="cash">Efectivo (sujeto a disponibilidad)</option>
+                  @if (paymentSettings.provider === 'sandbox') {
+                    <option value="card">Tarjeta de prueba — sin cobro real</option>
+                  }
+                  @if (paymentSettings.provider === 'mercadopago' && paymentSettings.publicKey) {
+                    <option value="card">Tarjeta</option>
+                  }
+                </select></label
+              >
+              @if (method === 'card' && paymentSettings.provider === 'mercadopago') {
+                <card-payment
+                  [publicKey]="paymentSettings.publicKey"
+                  [amount]="quote().total"
+                  [email]="user().email"
+                  [disabled]="busy()"
+                  (token)="onCardToken($event)"
+                />
+              } @else {
+                <button
+                  class="checkout-confirm"
+                  (click)="run(checkout.bind(this))"
+                  [disabled]="busy()"
+                >
+                  Confirmar pedido
+                </button>
               }
-              @if (paymentSettings.provider === 'mercadopago' && paymentSettings.publicKey) {
-                <option value="card">Tarjeta</option>
-              }
-            </select></label
-          >
-          @if (method === 'card' && paymentSettings.provider === 'mercadopago') {
-            <card-payment
-              [publicKey]="paymentSettings.publicKey"
-              [amount]="quote().total"
-              [email]="user().email"
-              [disabled]="busy()"
-              (token)="onCardToken($event)"
-            />
-          } @else {
-            <button (click)="run(checkout.bind(this))" [disabled]="busy()">Confirmar pedido</button>
-          }
-        }
+            } @else {
+              <p>
+                Calcula el total para conocer la entrega, los descuentos y el importe final antes de
+                confirmar.
+              </p>
+            }
+          </aside>
+        </div>
       }
     </section>
   }
@@ -421,8 +483,13 @@
         }
       </div>
       @if (selectedOrder()) {
-        <h2>{{ selectedOrder().quote.branch.name }}</h2>
-        <p class="status">{{ state(selectedOrder().state) }}</p>
+        <div class="section-heading tracking-heading">
+          <div>
+            <p class="eyebrow">TU PEDIDO</p>
+            <h2>{{ selectedOrder().quote.branch.name }}</h2>
+          </div>
+          <span class="order-status">{{ state(selectedOrder().state) }}</span>
+        </div>
         <p
           class="connection-status"
           role="status"

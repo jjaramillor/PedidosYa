@@ -628,6 +628,29 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         Assert.Null(Assert.Single(await Service<DispatchService>().OffersAsync(s.Courier,Ct)).Preview);
     }
 
+    [Fact]
+    public async Task Refund_permissions_allow_financial_summary_without_exposing_order_details()
+    {
+        var s=await CompleteCardDelivery();
+        using var scope=fixture.Factory.Services.CreateScope();var roles=scope.ServiceProvider.GetRequiredService<RoleService>();
+        await roles.BootstrapAdminAsync("admin@mvp.test",Ct);
+        foreach(var permission in new[]{"finance.manage","payments.refund","orders.operate","support.manage"})
+        {
+            var session=await Register(permission.Replace('.','-')+"@mvp.test");
+            var id=permission.Replace('.','-')+"-fixture";
+            await roles.SaveAsync(s.Admin.Id,id,new(id,[permission]),"refund-permissions",Ct);
+            await roles.AssignAsync(s.Admin.Id,session.User.Id,new(["customer",id]),"refund-permissions",Ct);
+            using var client=fixture.Factory.CreateClient();client.DefaultRequestHeaders.Authorization=new AuthenticationHeaderValue("Bearer",session.AccessToken);
+            var allowed=permission is "finance.manage" or "payments.refund";
+            using var summary=await client.GetAsync($"/api/v1/orders/{s.Order.Id}/payment");
+            Assert.Equal(allowed||permission=="orders.operate"?HttpStatusCode.OK:HttpStatusCode.Forbidden,summary.StatusCode);
+            if(allowed){using var details=await client.GetAsync($"/api/v1/orders/{s.Order.Id}");Assert.Equal(HttpStatusCode.Forbidden,details.StatusCode);}
+            using var refund=await client.PostAsJsonAsync($"/api/v1/admin/orders/{s.Order.Id}/refunds",new RefundInput(Guid.NewGuid(),100,"permission fixture QA"));
+            Assert.Equal(allowed?HttpStatusCode.NoContent:HttpStatusCode.Forbidden,refund.StatusCode);
+        }
+        Assert.Equal(200,(await Service<PaymentService>().InfoAsync(s.Order.Id,Ct)).Refunded);
+    }
+
     private sealed class SnapshotGateway(GatewayPayment snapshot) : IPaymentGateway
     {
         public Task<GatewayPayment> GetAsync(string id, CancellationToken ct) => Task.FromResult(snapshot);

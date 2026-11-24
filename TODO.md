@@ -35,14 +35,14 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 
 - [x] F1-01 Verificar consultas HTTP concurrentes con sesiones separadas de cliente, comercio, repartidor, soporte y tercero ajeno; aislamiento de PIN, revocación de permisos y cierre de una sesión sin afectar otras. [Evidencia](docs/mvp/validacion-local.md#sesiones-independientes-y-control-por-rol).
 - [x] F1-02 Cliente, comercio y soporte en navegadores aislados, con repartidor Android: pedido completo desde compra hasta cierre sandbox, con actualización en vivo y caso atendido por el operador. [Evidencia](docs/mvp/validacion-local.md#recorrido-simultáneo-por-interfaces).
-- [ ] F1-03 Comprobar actualizaciones SignalR y mapa en vivo; falta verificar visualmente cambios de estado y GPS producidos durante la desconexión.
+- [x] F1-03 Recuperar estado y marcador GPS producidos durante interrupción real del canal SignalR mediante proxy local de prueba, sin actualizar manualmente. Se mantienen las pruebas de aislamiento y reconexión anteriores. [Evidencia](docs/mvp/validacion-local.md#compra-reconexión-y-reembolsos-por-interfaz).
 - [x] F1-03c Mostrar estado de conexión, recuperar seguimiento manualmente tras agotar reintentos y automáticamente tras reinicio de API; coalescer eventos sin perder la lectura final y aislar conexiones retiradas. Ocho pruebas de seguimiento y validación visual aprobadas. [Evidencia](docs/mvp/validacion-local.md#recuperación-del-seguimiento-web).
-- [x] F1-03b Verificar cambios en vivo entre comercio, cliente y Android: aceptación, preparación, retiro, ruta, ETA y cierre. La reconexión visual sigue pendiente. [Evidencia](docs/mvp/validacion-local.md#recorrido-simultáneo-por-interfaces).
+- [x] F1-03b Verificar cambios en vivo entre comercio, cliente y Android: aceptación, preparación, retiro, ruta, ETA y cierre. La reconexión con cambios de estado y GPS se completó posteriormente en F1-03. [Evidencia](docs/mvp/validacion-local.md#recorrido-simultáneo-por-interfaces).
 - [x] F1-03a Verificar el transporte SignalR con WebSockets reales de integración: suscripción autorizada, aislamiento de pedidos, baja, resuscripción y eliminación de una sesión cerrada. [Evidencia](docs/mvp/validacion-local.md#tiempo-real-con-websockets).
-- [ ] F1-04 Ejecutar alta/revisión documental, suspensión y reactivación desde sus interfaces. Pendientes: flujo del repartidor y comprobación de descarga/revisión documental.
+- [ ] F1-04 Ejecutar alta/revisión documental, suspensión y reactivación desde sus interfaces. Pendientes: flujo del repartidor y comprobación de descarga/revisión documental. El controlador nativo quedó bloqueado durante este ensayo; la identidad ficticia está preparada pero no se envió afiliación.
 - [x] F1-04a Crear comercio, adjuntar documento ficticio, enviar afiliación, aprobar, suspender y reactivar desde web; propietario confirma estado aprobado. [Evidencia](docs/mvp/validacion-local.md#afiliación-y-reasignación-desde-web).
-- [ ] F1-05 Aceptar/rechazar oferta, probar reasignación antes del retiro y comprobar su bloqueo después del retiro. Reglas verificadas en integración; reasignación previa al retiro comprobada por interfaz. Pendiente: bloqueo posterior al retiro desde interfaz; rechazo desde móvil completado en F1-05c.
-- [x] F1-05c Rechazar desde Android una oferta sintética tras revisar su detalle; desaparición de la oferta y auditoría confirmadas. Sigue pendiente bloqueo posterior al retiro por interfaz. [Evidencia](docs/mvp/validacion-local.md#ofertas-informadas-en-android).
+- [x] F1-05 Oferta aceptada/rechazada en Android, reasignación previa al retiro y bloqueo posterior por Administración, con evidencia acumulada F1-02/F1-05b/F1-05c y prueba actual del rechazo tardío. [Evidencia](docs/mvp/validacion-local.md#compra-reconexión-y-reembolsos-por-interfaz).
+- [x] F1-05c Rechazar desde Android una oferta sintética tras revisar su detalle; desaparición de la oferta y auditoría confirmadas. El bloqueo posterior al retiro se completó en F1-05. [Evidencia](docs/mvp/validacion-local.md#ofertas-informadas-en-android).
 - [x] F1-05b Reasignar antes del retiro desde Administración y comprobar auditoría; cerrar el pedido ficticio desde la misma interfaz. [Evidencia](docs/mvp/validacion-local.md#afiliación-y-reasignación-desde-web).
 - [x] F1-05a Verificar rechazo y nueva oferta, aceptación concurrente idempotente, reasignación autorizada antes del retiro, revocación del acceso anterior, bloqueo posterior y aislamiento GPS por API/eventos. [Evidencia](docs/mvp/validacion-local.md#reasignación-y-privacidad-de-ubicación).
 - [x] F1-06 Solicitud abierta desde Android, atendida y resuelta por el operador en Chrome, y resolución consultada por el repartidor tras reiniciar la app. [Evidencia](docs/mvp/validacion-local.md#respuesta-de-soporte-visible-en-android).
@@ -52,7 +52,7 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 ## UI y UX
 
 - [x] UX-01 Primera etapa minimalista: portada gastronómica, búsqueda simplificada, filtros desplegables y navegación activa; comercio separado en Pedidos, Carta y Configuración, con estados y filtros por etapa. Compilación y comprobación visual en escritorio y ancho móvil de 390 px. [Evidencia](docs/mvp/validacion-local.md#primera-etapa-de-ui-y-ux).
-- [ ] UX-02 Extender la presentación al carrito, checkout y seguimiento; verificar compra completa con el nuevo diseño.
+- [x] UX-02 Carrito y checkout adaptables, resumen de importes y seguimiento rediseñados; compra web sandbox confirmada y resultado completado observado. Acciones de comercio/reparto preparadas por API en este ensayo. [Evidencia](docs/mvp/validacion-local.md#compra-reconexión-y-reembolsos-por-interfaz).
 - [x] UX-03 Separar Administración en Pedidos, Participantes, Soporte, Finanzas, Configuración y Auditoría, filtradas por permisos; navegación comprobada por interfaz y prueba de permisos aprobada. [Evidencia](docs/mvp/validacion-local.md#administración-por-áreas).
 - [x] UX-05 Aplicar base visual minimalista en Flutter y separar navegación de cliente (Explorar/Carrito/Pedidos) y repartidor (Entregas/Ganancias/Perfil); análisis y 20 pruebas aprobadas, APK instalado y navegación revisada en el emulador. [Evidencia](docs/mvp/validacion-local.md#presentación-minimalista-en-la-app-flutter).
 - [ ] UX-04 Incorporar fotografías propias de los comercios, revisar accesibilidad integral y validar con usuarios del piloto.
@@ -60,7 +60,7 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 ## F2 Finanzas y compensaciones
 
 - [x] F2-01 Probar devolución parcial y total tras captura sandbox, reintentos concurrentes, auditoría única, conflicto de clave y reversión contable sin duplicados. [Evidencia](docs/mvp/validacion-local.md#reembolsos-tras-captura).
-- [ ] F2-02 Verificar reembolso parcial y total por interfaz, límite de devolución y permisos de Finanzas/Soporte.
+- [x] F2-02 Devolución parcial y total por Administración/pedido y caso de soporte, límite visible y saldo actualizado. Permisos de roles limitados comprobados por HTTP; la revisión visual usa administrador ficticio. [Evidencia](docs/mvp/validacion-local.md#compra-reconexión-y-reembolsos-por-interfaz).
 - [x] F2-03 Probar conciliación con discrepancias, consultas repetidas y webhooks duplicados/tardíos mediante adaptador de pruebas; sandbox nunca se presenta como verificación bancaria. La pasarela real continúa en F4-04. [Evidencia](docs/mvp/validacion-local.md#conciliación-y-notificaciones-duplicadas).
 - [x] F2-04 Ejecutar rendición de efectivo, cierre de liquidación y referencia externa mediante integración: reintentos concurrentes, límite de deuda y auditoría sin duplicados. Registrar pago no ejecuta transferencia. [Evidencia](docs/mvp/validacion-local.md#rendición-liquidaciones-y-cupones).
 - [x] F2-05 Validar financiación de cupón por comercio/plataforma, comisión, propina, incentivo idempotente y reembolso posterior a liquidación pagada sin editar historia. [Evidencia](docs/mvp/validacion-local.md#rendición-liquidaciones-y-cupones).
@@ -96,7 +96,7 @@ La [trazabilidad](docs/mvp/trazabilidad.md) relaciona código y contratos. Estas
 
 - [ ] ACE-ID-001 Registro y OTP (Debe).
 - [ ] ACE-ID-002 Inicio y recuperación de sesión (Debe).
-- [ ] ACE-ID-003 Roles y permisos (Debe).
+- [x] ACE-ID-003 Roles y permisos (Debe). [Aceptación local y criterios](docs/mvp/aceptacion-id-003.md).
 - [ ] ACE-ID-005 Gestión de consentimiento y cuenta (Debe).
 ### Cliente
 

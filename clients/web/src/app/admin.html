@@ -39,6 +39,16 @@
 @if (can('participants.manage')) {
   <section class="panel" [hidden]="section() !== 'participants'">
     <h2>Participantes</h2>
+    @if (documentPreview(); as preview) {
+      <figure class="panel">
+        <figcaption>{{ preview.name }}</figcaption>
+        <img
+          class="document-preview"
+          [src]="preview.url"
+          alt="Documento adjunto a la solicitud de afiliación"
+        /><button class="secondary" (click)="closeDocument()">Cerrar documento</button>
+      </figure>
+    }
     <div class="grid">
       @for (item of merchants(); track item.id) {
         <article class="card">
@@ -47,7 +57,7 @@
           <p>Cuenta bancaria: {{ item.bankAccount }}</p>
           @for (id of item.documentIds; track id) {
             <button class="secondary" (click)="run(document.bind(this, id))">
-              Descargar documento
+              Revisar documento
             </button>
           }
           <div class="row">
@@ -73,7 +83,7 @@
           <p>{{ item.status }} · {{ item.available ? 'Disponible' : 'No disponible' }}</p>
           @for (id of item.documentIds; track id) {
             <button class="secondary" (click)="run(document.bind(this, id))">
-              Descargar documento
+              Revisar documento
             </button>
           }
           <button (click)="run(decide.bind(this, 'courier', item.id, 'approved'))">Aprobar</button
@@ -302,13 +312,21 @@
         </select></label
       ><button (click)="run(reassign.bind(this))">Reasignar</button>
       @if (can('finance.manage')) {
+        @if (payment()) {
+          <p>
+            Cobrado: {{ money(payment().captured) }} · Devuelto: {{ money(payment().refunded) }} ·
+            Disponible para devolver: {{ money(payment().captured - payment().refunded) }}
+          </p>
+        }
         <label
           >Importe a devolver (S/)<input
             type="number"
             min="0.01"
             step="0.01"
             [(ngModel)]="refundAmount" /></label
-        ><button (click)="run(refund.bind(this))">Reembolsar</button>
+        ><button [disabled]="busy() || refundAmount <= 0" (click)="run(refund.bind(this))">
+          Reembolsar
+        </button>
         @if (selectedOrder().state === 'closed') {
           <button class="secondary" (click)="run(incentive.bind(this))">
             Registrar ese importe como incentivo al repartidor seleccionado
@@ -331,13 +349,22 @@
     @if (selectedCase()) {
       <p>{{ selectedCase().description }}</p>
       @if (can('payments.refund') || can('finance.manage')) {
+        @if (payment()?.orderId === selectedCase().order.id) {
+          <p>
+            Cobrado: {{ money(payment().captured) }} · Devuelto: {{ money(payment().refunded) }} ·
+            Disponible para devolver: {{ money(payment().captured - payment().refunded) }}
+          </p>
+        }
         <label
           >Importe a devolver (S/)<input
             type="number"
             min="0.01"
             step="0.01"
             [(ngModel)]="refundAmount" /></label
-        ><button (click)="selectedOrder.set(selectedCase().order); run(refund.bind(this))">
+        ><button
+          [disabled]="busy() || refundAmount <= 0"
+          (click)="selectedOrder.set(selectedCase().order); run(refund.bind(this))"
+        >
           Reembolsar pedido del caso
         </button>
       }
@@ -433,21 +460,47 @@
 @if (can('identity.roles.manage')) {
   <section class="panel" [hidden]="section() !== 'participants'">
     <h2>Roles y permisos</h2>
-    <button (click)="run(loadRoles.bind(this))">Consultar roles</button>
+    <button [disabled]="busy()" (click)="run(loadRoles.bind(this))">Consultar roles</button>
+    <button class="secondary" (click)="newRole()">Nuevo rol</button>
     @for (item of roles(); track item.id) {
       <button class="secondary" (click)="editRole(item)">{{ item.name }}</button>
     }
     <form (ngSubmit)="run(saveRole.bind(this))">
-      <label>Código de rol<input name="roleId" [(ngModel)]="roleId" required /></label
-      ><label>Nombre<input name="roleName" [(ngModel)]="roleName" required /></label>
+      <label
+        >Código de rol<input
+          name="roleId"
+          [(ngModel)]="roleId"
+          [readonly]="isSystemRole()"
+          required /></label
+      ><label
+        >Nombre<input name="roleName" [(ngModel)]="roleName" [readonly]="isSystemRole()" required
+      /></label>
       @for (permission of rolePermissions(); track permission) {
         <label class="check"
-          ><input [name]="permission" type="checkbox" [(ngModel)]="roleSelection[permission]" />{{
-            permission
-          }}</label
+          ><input
+            [name]="permission"
+            type="checkbox"
+            [disabled]="isSystemRole()"
+            [(ngModel)]="roleSelection[permission]"
+          />{{ permission }}</label
         >
       }
-      <button>Guardar rol</button>
+      <button [disabled]="busy() || isSystemRole()">Guardar rol</button>
+      @if (canDeleteRole()) {
+        <label
+          >Confirma el código del rol para eliminarlo<input
+            name="roleDeleteConfirmation"
+            [(ngModel)]="roleDeleteConfirmation"
+        /></label>
+      }
+      <button
+        type="button"
+        class="secondary"
+        [disabled]="busy() || !canDeleteRole() || roleDeleteConfirmation !== roleId"
+        (click)="run(deleteRole.bind(this))"
+      >
+        Eliminar rol sin cuentas asignadas
+      </button>
     </form>
     <h3>Asignar roles a una cuenta</h3>
     <label

@@ -10,6 +10,7 @@ execFileSync(process.execPath, [
   require.resolve('typescript/bin/tsc'),
   path.join(web, 'src/app/tracking-session.ts'),
   path.join(web, 'src/app/admin-sections.ts'),
+  path.join(web, 'src/app/refund-intent.ts'),
   '--target',
   'ES2022',
   '--module',
@@ -199,4 +200,28 @@ test('administration only exposes sections authorized by permissions', () => {
     visibleAdminSections(['promotions.manage', 'configuration.manage']).map((x) => x.id),
     ['configuration'],
   );
+});
+
+const { RefundIntent } = require(path.join(output, 'refund-intent.js'));
+test('a lost refund response keeps its idempotency key and a successful acknowledgement clears it', () => {
+  let created = 0;
+  const intent = new RefundIntent(() => String(++created));
+  const first = intent.payload('order-a', 100, 'QA');
+  assert.deepEqual(intent.payload('order-a', 100, 'QA'), first);
+  assert.notEqual(intent.payload('order-b', 100, 'QA').operationId, first.operationId);
+  const changed = intent.payload('order-a', 200, 'new QA');
+  assert.deepEqual(intent.payload('order-a', 200, 'new QA'), changed);
+  intent.complete();
+  assert.notEqual(intent.payload('order-a', 200, 'new QA').operationId, changed.operationId);
+});
+
+const { canDeleteCustomRole } = require(path.join(output, 'admin-sections.js'));
+test('role deletion UI recognizes the systemRole contract and rejects unknown roles', () => {
+  const roles = [
+    { id: 'admin', name: 'Administrador', permissions: [], systemRole: true },
+    { id: 'qa-role', name: 'QA', permissions: [], systemRole: false },
+  ];
+  assert.equal(canDeleteCustomRole(roles, 'admin'), false);
+  assert.equal(canDeleteCustomRole(roles, 'missing'), false);
+  assert.equal(canDeleteCustomRole(roles, 'qa-role'), true);
 });
