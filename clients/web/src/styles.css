@@ -1,7 +1,8 @@
 @import 'leaflet/dist/leaflet.css';
+@import './design.css';
 body {
   margin: 0;
-  background: #fcfdfb;
+  background: #f7f8f4;
 }
 * {
   box-sizing: border-box;

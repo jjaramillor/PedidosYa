@@ -1,19 +1,54 @@
+<a class="skip-link" href="#contenido">Ir al contenido</a>
 <header>
-  <a class="brand" href="/">Delivery</a>
+  <a class="brand" href="/">delivery<span>•</span></a>
   <nav aria-label="Principal">
-    <button (click)="tab.set('explore')">Restaurantes</button
-    ><button (click)="tab.set('cart')">Carrito ({{ basket().length }})</button>
+    <button
+      [class.nav-active]="tab() === 'explore'"
+      [attr.aria-current]="tab() === 'explore' ? 'page' : null"
+      (click)="tab.set('explore')"
+    >
+      Restaurantes</button
+    ><button
+      [class.nav-active]="tab() === 'cart'"
+      [attr.aria-current]="tab() === 'cart' ? 'page' : null"
+      (click)="tab.set('cart')"
+    >
+      Carrito ({{ basket().length }})
+    </button>
     @if (user()) {
-      <button (click)="tab.set('orders')">Mis pedidos</button
-      ><button (click)="tab.set('merchant')">Mi comercio</button>
+      <button
+        [class.nav-active]="tab() === 'orders'"
+        [attr.aria-current]="tab() === 'orders' ? 'page' : null"
+        (click)="tab.set('orders')"
+      >
+        Mis pedidos</button
+      ><button
+        [class.nav-active]="tab() === 'merchant'"
+        [attr.aria-current]="tab() === 'merchant' ? 'page' : null"
+        (click)="tab.set('merchant')"
+      >
+        Mi comercio
+      </button>
       @if (permissions().some(isAdminPermission)) {
-        <button (click)="tab.set('admin')">Administración</button>
+        <button
+          [class.nav-active]="tab() === 'admin'"
+          [attr.aria-current]="tab() === 'admin' ? 'page' : null"
+          (click)="tab.set('admin')"
+        >
+          Administración
+        </button>
       }
     }
-    <button (click)="tab.set('account')">{{ user()?.displayName || 'Ingresar' }}</button>
+    <button
+      [class.nav-active]="tab() === 'account'"
+      [attr.aria-current]="tab() === 'account' ? 'page' : null"
+      (click)="tab.set('account')"
+    >
+      {{ user()?.displayName || 'Ingresar' }}
+    </button>
   </nav>
 </header>
-<main [attr.aria-busy]="busy()">
+<main id="contenido" [attr.aria-busy]="busy()">
   @if (error()) {
     <p role="alert" class="error">{{ error() }}</p>
   }
@@ -24,71 +59,118 @@
     <p role="status">Procesando…</p>
   }
   @if (tab() === 'explore') {
-    <section class="hero">
-      <p class="eyebrow">TU PRÓXIMA COMIDA, MÁS CERCA</p>
-      <h1>Descubre algo<br />que te encante.</h1>
-      <p>Restaurantes disponibles para entregar en tu dirección.</p>
+    <section class="hero discovery-hero">
+      <div>
+        <p class="eyebrow">A TU GUSTO. A TU PUERTA.</p>
+        <h1>Hoy se come<br /><span>rico.</span></h1>
+        <p>Encuentra tu próximo favorito entre los restaurantes de tu zona.</p>
+        <a class="text-link" href="#restaurantes"
+          >Explorar restaurantes <span aria-hidden="true">↗</span></a
+        >
+      </div>
+      <img
+        class="hero-art"
+        src="/food-table.svg"
+        alt="Ilustración de un plato con vegetales frescos"
+        width="460"
+        height="320"
+      />
     </section>
-    <form class="filters" (ngSubmit)="run(searchCatalog.bind(this))">
-      <label
-        >Buscar<input name="search" [(ngModel)]="search" placeholder="Restaurante o plato" /></label
-      ><label
-        >Categoría<input
-          name="category"
-          [(ngModel)]="category"
-          placeholder="Pizza, criollo…" /></label
-      ><label
-        >Radio (km)<input
-          name="radius"
-          type="number"
-          min="1"
-          max="50"
-          [(ngModel)]="radius" /></label
-      ><label
-        >Precio máximo (S/)<input
-          name="maximumPrice"
-          type="number"
-          min="0"
-          [(ngModel)]="maximumPrice" /></label
-      ><label
-        >Valoración mínima<select name="minimumRating" [(ngModel)]="minimumRating">
-          <option [ngValue]="0">Cualquiera</option>
-          <option [ngValue]="3">3 estrellas</option>
-          <option [ngValue]="4">4 estrellas</option>
-        </select></label
-      ><label
-        >Tiempo máximo (min)<input
-          name="maximumMinutes"
-          type="number"
-          min="1"
-          [(ngModel)]="maximumMinutes" /></label
-      ><button [disabled]="busy()">Buscar</button>
-    </form>
-    <div class="location">
-      <button (click)="run(locate.bind(this))">Usar mi ubicación</button>
+    <div class="location delivery-location">
+      <div>
+        <span class="eyebrow">DÓNDE ENTREGAMOS</span>
+        <p>{{ addressId ? 'Tu dirección seleccionada' : 'Ubicación de búsqueda actual' }}</p>
+      </div>
       @if (addresses().length) {
         <select
           aria-label="Dirección de entrega"
           [(ngModel)]="addressId"
-          (change)="selectAddress()"
+          (change)="selectAddress(); run(searchCatalog.bind(this))"
         >
           @for (item of addresses(); track item.id) {
             <option [value]="item.id">{{ item.label }} — {{ item.street }}</option>
           }
         </select>
       }
+      <button class="secondary" (click)="run(locate.bind(this))">Usar mi ubicación</button>
     </div>
-    <div class="grid">
+    <form class="search-bar" (ngSubmit)="run(searchCatalog.bind(this))">
+      <label
+        >Buscar<input name="search" [(ngModel)]="search" placeholder="Restaurante o plato"
+      /></label>
+      <button [disabled]="busy()">Buscar</button>
+      <details class="advanced-filters">
+        <summary>Filtros</summary>
+        <div class="filters">
+          <label
+            >Categoría<input
+              name="category"
+              [(ngModel)]="category"
+              placeholder="Pizza, criollo…" /></label
+          ><label
+            >Radio (km)<input
+              name="radius"
+              type="number"
+              min="1"
+              max="50"
+              [(ngModel)]="radius" /></label
+          ><label
+            >Precio máximo (S/)<input
+              name="maximumPrice"
+              type="number"
+              min="0"
+              [(ngModel)]="maximumPrice" /></label
+          ><label
+            >Valoración mínima<select name="minimumRating" [(ngModel)]="minimumRating">
+              <option [ngValue]="0">Cualquiera</option>
+              <option [ngValue]="3">3 estrellas</option>
+              <option [ngValue]="4">4 estrellas</option>
+            </select></label
+          ><label
+            >Tiempo máximo (min)<input
+              name="maximumMinutes"
+              type="number"
+              min="1"
+              [(ngModel)]="maximumMinutes"
+          /></label>
+          <button class="secondary" [disabled]="busy()">Aplicar filtros</button>
+        </div>
+      </details>
+    </form>
+    <div class="section-heading" id="restaurantes">
+      <div>
+        <p class="eyebrow">DESCUBRE TU ZONA</p>
+        <h2>¿Qué se te antoja?</h2>
+      </div>
+      <span class="result-count" role="status"
+        >{{ branches().length }}
+        {{ branches().length === 1 ? 'restaurante' : 'restaurantes' }}</span
+      >
+    </div>
+    <div class="grid restaurant-grid">
       @for (item of branches(); track item.branch.id) {
-        <article class="card">
-          <div class="food-cover">🍽</div>
+        <article class="card restaurant-card">
+          <div
+            class="food-cover restaurant-cover"
+            [class.cover-sage]="$index % 3 === 1"
+            [class.cover-gold]="$index % 3 === 2"
+            aria-hidden="true"
+          >
+            <img src="/food-table.svg" alt="" />
+          </div>
           <h2>{{ item.branch.name }}</h2>
           <p>
             {{ item.etaMinutes }} min · {{ item.distanceKilometers | number: '1.1-1' }} km · ★
-            {{ item.rating | number: '1.1-1' }}
+            {{ item.rating > 0 ? (item.rating | number: '1.1-1') : 'Nuevo' }}
           </p>
           <p>Desde {{ money(item.minimumProductPrice) }}</p>
-          <button (click)="run(openBranch.bind(this, item.branch.id))">Ver carta</button>
+          <button
+            class="restaurant-cta"
+            [disabled]="busy()"
+            (click)="run(openBranch.bind(this, item.branch.id))"
+          >
+            Ver carta <span aria-hidden="true">↗</span>
+          </button>
         </article>
       } @empty {
         <p>

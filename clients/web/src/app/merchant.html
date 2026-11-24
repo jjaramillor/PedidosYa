@@ -7,103 +7,148 @@
 @if (busy()) {
   <p role="status">Procesando…</p>
 }
-<h1>Tu restaurante</h1>
-<section class="panel">
-  <h2>Alta de comercio</h2>
-  <form (ngSubmit)="run(apply.bind(this))">
-    <div class="row">
-      <label>Nombre comercial<input name="name" required [(ngModel)]="application.name" /></label
-      ><label
-        >RUC / identificación fiscal<input name="tax" required [(ngModel)]="application.taxId"
-      /></label>
-    </div>
-    <label
-      >Cuenta bancaria<input name="bank" required [(ngModel)]="application.bankAccount" /></label
-    ><label
-      >Documentos (PDF, JPG o PNG)<input
-        type="file"
-        multiple
-        accept="application/pdf,image/jpeg,image/png"
-        (change)="run(upload.bind(this, $event))"
-    /></label>
-    <p>{{ application.documentIds.length }} documentos adjuntos</p>
-    <button [disabled]="busy() || !application.documentIds.length">Enviar solicitud</button>
-  </form>
-</section>
-@if (businesses().length) {
+<div class="section-heading workspace-heading">
+  <div>
+    <p class="eyebrow">ESPACIO DEL COMERCIO</p>
+    <h1>Tu restaurante</h1>
+    <p>Todo listo para tu próximo pedido.</p>
+  </div>
+  <button class="secondary" [disabled]="busy()" (click)="run(reload.bind(this))">
+    Actualizar pedidos
+  </button>
+</div>
+<nav class="workspace-nav" aria-label="Secciones del comercio">
+  <button
+    [class.nav-active]="workspace() === 'orders'"
+    [attr.aria-current]="workspace() === 'orders' ? 'page' : null"
+    (click)="workspace.set('orders')"
+  >
+    Pedidos
+  </button>
+  <button
+    [class.nav-active]="workspace() === 'menu'"
+    [attr.aria-current]="workspace() === 'menu' ? 'page' : null"
+    (click)="workspace.set('menu')"
+  >
+    Carta
+  </button>
+  <button
+    [class.nav-active]="workspace() === 'settings'"
+    [attr.aria-current]="workspace() === 'settings' ? 'page' : null"
+    (click)="workspace.set('settings')"
+  >
+    Configuración
+  </button>
+</nav>
+@if (workspace() === 'settings' || !businesses().length) {
   <section class="panel">
-    <h2>Comercios y sucursales</h2>
-    <label
-      >Comercio<select [(ngModel)]="merchantId">
-        @for (item of businesses(); track item.id) {
-          <option [value]="item.id">{{ item.name }} · {{ item.status }}</option>
-        }
-      </select></label
-    >
-    <form (ngSubmit)="run(saveBranch.bind(this))">
-      <h3>{{ editingBranchId ? 'Editar sucursal y horario diario' : 'Nueva sucursal' }}</h3>
-      @if (branches().length) {
-        <button type="button" class="secondary" (click)="editBranch()">
-          Editar sucursal seleccionada
-        </button>
-      }
-      <label>Nombre<input name="branchName" required [(ngModel)]="branch.name" /></label>
+    <h2>Alta de comercio</h2>
+    <form (ngSubmit)="run(apply.bind(this))">
       <div class="row">
-        <label
-          >Latitud<input name="lat" type="number" step="any" [(ngModel)]="branch.latitude" /></label
+        <label>Nombre comercial<input name="name" required [(ngModel)]="application.name" /></label
         ><label
-          >Longitud<input name="lng" type="number" step="any" [(ngModel)]="branch.longitude"
+          >RUC / identificación fiscal<input name="tax" required [(ngModel)]="application.taxId"
         /></label>
       </div>
-      <div class="row">
-        <label
-          >Pedido mínimo (S/)<input
-            name="minimum"
-            type="number"
-            min="0"
-            [(ngModel)]="branch.minimumOrder" /></label
-        ><label
-          >Preparación (minutos)<input
-            name="prep"
-            type="number"
-            min="1"
-            [(ngModel)]="branch.preparationMinutes"
-        /></label>
-      </div>
-      <div class="row">
-        <label>Apertura diaria<input name="from" type="time" [(ngModel)]="branch.from" /></label
-        ><label>Cierre diario<input name="to" type="time" [(ngModel)]="branch.to" /></label>
-      </div>
-      <label class="check"
-        ><input name="branchActive" type="checkbox" [(ngModel)]="branch.active" />Sucursal
-        activa</label
-      >
-      <button [disabled]="busy()">Guardar sucursal</button>
+      <label
+        >Cuenta bancaria<input name="bank" required [(ngModel)]="application.bankAccount" /></label
+      ><label
+        >Documentos (PDF, JPG o PNG)<input
+          type="file"
+          multiple
+          accept="application/pdf,image/jpeg,image/png"
+          (change)="run(upload.bind(this, $event))"
+      /></label>
+      <p>{{ application.documentIds.length }} documentos adjuntos</p>
+      <button [disabled]="busy() || !application.documentIds.length">Enviar solicitud</button>
     </form>
-    <button class="secondary" (click)="run(report.bind(this))">Ver ingresos y liquidaciones</button>
-    @if (statement()) {
-      <p>Saldo disponible: {{ money(statement().pending) }}</p>
-      @for (movement of statement().movements; track movement.id) {
-        <p>
-          {{ movement.at | date: 'short' }} · {{ movement.kind }} · {{ money(movement.amount) }}
-        </p>
-      }
-      @for (item of statement().settlements; track item.id) {
-        <p>{{ money(item.amount) }} · {{ item.paidAt ? 'Pagada' : 'Pendiente' }}</p>
-      }
-    }
   </section>
+  @if (businesses().length) {
+    <section class="panel">
+      <h2>Comercios y sucursales</h2>
+      <label
+        >Comercio<select [(ngModel)]="merchantId">
+          @for (item of businesses(); track item.id) {
+            <option [value]="item.id">{{ item.name }} · {{ item.status }}</option>
+          }
+        </select></label
+      >
+      <form (ngSubmit)="run(saveBranch.bind(this))">
+        <h3>{{ editingBranchId ? 'Editar sucursal y horario diario' : 'Nueva sucursal' }}</h3>
+        @if (branches().length) {
+          <button type="button" class="secondary" (click)="editBranch()">
+            Editar sucursal seleccionada
+          </button>
+        }
+        <label>Nombre<input name="branchName" required [(ngModel)]="branch.name" /></label>
+        <div class="row">
+          <label
+            >Latitud<input
+              name="lat"
+              type="number"
+              step="any"
+              [(ngModel)]="branch.latitude" /></label
+          ><label
+            >Longitud<input name="lng" type="number" step="any" [(ngModel)]="branch.longitude"
+          /></label>
+        </div>
+        <div class="row">
+          <label
+            >Pedido mínimo (S/)<input
+              name="minimum"
+              type="number"
+              min="0"
+              [(ngModel)]="branch.minimumOrder" /></label
+          ><label
+            >Preparación (minutos)<input
+              name="prep"
+              type="number"
+              min="1"
+              [(ngModel)]="branch.preparationMinutes"
+          /></label>
+        </div>
+        <div class="row">
+          <label>Apertura diaria<input name="from" type="time" [(ngModel)]="branch.from" /></label
+          ><label>Cierre diario<input name="to" type="time" [(ngModel)]="branch.to" /></label>
+        </div>
+        <label class="check"
+          ><input name="branchActive" type="checkbox" [(ngModel)]="branch.active" />Sucursal
+          activa</label
+        >
+        <button [disabled]="busy()">Guardar sucursal</button>
+      </form>
+      <button class="secondary" (click)="run(report.bind(this))">
+        Ver ingresos y liquidaciones
+      </button>
+      @if (statement()) {
+        <p>Saldo disponible: {{ money(statement().pending) }}</p>
+        @for (movement of statement().movements; track movement.id) {
+          <p>
+            {{ movement.at | date: 'short' }} · {{ movement.kind }} · {{ money(movement.amount) }}
+          </p>
+        }
+        @for (item of statement().settlements; track item.id) {
+          <p>{{ money(item.amount) }} · {{ item.paidAt ? 'Pagada' : 'Pendiente' }}</p>
+        }
+      }
+    </section>
+  }
 }
 @if (branches().length) {
-  <section class="panel">
+  <div class="branch-toolbar">
     <label
       >Sucursal<select [(ngModel)]="branchId" (change)="run(selectBranch.bind(this))">
         @for (item of branches(); track item.id) {
           <option [value]="item.id">{{ item.name }}</option>
         }
       </select></label
-    ><button class="secondary" (click)="run(pause.bind(this, 60))">Pausar una hora</button
-    ><button class="secondary" (click)="run(pause.bind(this, 0))">Reanudar pedidos</button>
+    >
+  </div>
+  <section class="panel" [hidden]="workspace() !== 'orders'">
+    <div class="branch-actions">
+      <button class="secondary" (click)="run(pause.bind(this, 60))">Pausar una hora</button
+      ><button class="secondary" (click)="run(pause.bind(this, 0))">Reanudar pedidos</button>
+    </div>
     <details>
       <summary>Equipo de la sucursal (propietario)</summary>
       <button class="secondary" (click)="run(loadTeam.bind(this))">Ver equipo</button>
@@ -123,49 +168,92 @@
         </select></label
       ><button (click)="run(saveMember.bind(this))">Añadir o actualizar integrante</button>
     </details>
-    <h2>Pedidos</h2>
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">OPERACIÓN</p>
+        <h2>Pedidos de la sucursal</h2>
+      </div>
+      <span class="result-count">{{ ordersFor('active').length }} en curso</span>
+    </div>
+    <div class="order-filters" role="group" aria-label="Filtrar pedidos">
+      @for (stage of orderStages; track stage.id) {
+        <button
+          class="secondary"
+          [attr.aria-pressed]="orderFilter() === stage.id"
+          (click)="orderFilter.set(stage.id)"
+        >
+          {{ stage.label }} <span>{{ ordersFor(stage.id).length }}</span>
+        </button>
+      }
+    </div>
     <div class="grid">
-      @for (item of orders(); track item.id) {
+      @for (item of ordersFor(orderFilter()); track item.id) {
         <article class="card">
-          <h3>Pedido · {{ item.createdAt | date: 'shortTime' }}</h3>
-          <p>{{ item.state }} · {{ money(item.quote.total) }}</p>
+          <span class="order-status" [class.ready]="item.state === 'ready'">{{
+            stateLabel(item.state)
+          }}</span>
+          <h3>Pedido #{{ item.id.slice(0, 8) }}</h3>
+          <p>{{ item.createdAt | date: 'short' }}</p>
+          <strong>{{ money(item.quote.total) }}</strong>
           <button (click)="run(openOrder.bind(this, item.id))">Gestionar</button>
         </article>
+      } @empty {
+        <div class="empty-state">
+          <h3>Todo al día</h3>
+          <p>
+            No hay pedidos en esta etapa. Puedes revisar las otras etapas o actualizar los pedidos.
+          </p>
+        </div>
       }
     </div>
     @if (selectedOrder()) {
-      <h3>{{ selectedOrder().state }}</h3>
-      @for (line of selectedOrder().quote.lines; track $index) {
-        <p>
-          {{ line.quantity }} × {{ line.name }}
-          @for (m of line.modifiers; track m.id) {
-            <span> · {{ m.name }}</span>
+      <div class="order-detail">
+        <p class="eyebrow">DETALLE DEL PEDIDO #{{ selectedOrder().id.slice(0, 8) }}</p>
+        <h3>{{ stateLabel(selectedOrder().state) }}</h3>
+        @for (line of selectedOrder().quote.lines; track $index) {
+          <p>
+            {{ line.quantity }} × {{ line.name }}
+            @for (m of line.modifiers; track m.id) {
+              <span> · {{ m.name }}</span>
+            }
+          </p>
+        }
+        @if (delivery()?.pickupPin) {
+          <p class="pin">
+            Código de retiro: <strong>{{ delivery().pickupPin }}</strong>
+          </p>
+        }
+        <label>Motivo / observación<input [(ngModel)]="reason" /></label>
+        <div class="row">
+          @if (selectedOrder().state === 'confirmed') {
+            <button [disabled]="busy()" (click)="run(action.bind(this, 'accepted'))">
+              Aceptar
+            </button>
           }
-        </p>
-      }
-      @if (delivery()?.pickupPin) {
-        <p class="pin">
-          Código de retiro: <strong>{{ delivery().pickupPin }}</strong>
-        </p>
-      }
-      <label>Motivo / observación<input [(ngModel)]="reason" /></label>
-      <div class="row">
-        @if (selectedOrder().state === 'confirmed') {
-          <button (click)="run(action.bind(this, 'accepted'))">Aceptar</button>
-        }
-        @if (selectedOrder().state === 'accepted') {
-          <button (click)="run(action.bind(this, 'preparing'))">Preparar</button>
-        }
-        @if (selectedOrder().state === 'preparing') {
-          <button (click)="run(action.bind(this, 'ready'))">Listo para retiro</button>
-        }
-        @if (['confirmed', 'accepted', 'preparing', 'ready'].includes(selectedOrder().state)) {
-          <button class="secondary" (click)="run(action.bind(this, 'cancelled'))">Cancelar</button>
-        }
+          @if (selectedOrder().state === 'accepted') {
+            <button [disabled]="busy()" (click)="run(action.bind(this, 'preparing'))">
+              Preparar
+            </button>
+          }
+          @if (selectedOrder().state === 'preparing') {
+            <button [disabled]="busy()" (click)="run(action.bind(this, 'ready'))">
+              Listo para retiro
+            </button>
+          }
+          @if (['confirmed', 'accepted', 'preparing', 'ready'].includes(selectedOrder().state)) {
+            <button
+              class="secondary"
+              [disabled]="busy()"
+              (click)="run(action.bind(this, 'cancelled'))"
+            >
+              Cancelar
+            </button>
+          }
+        </div>
       </div>
     }
   </section>
-  <section class="panel">
+  <section class="panel" [hidden]="workspace() !== 'menu'">
     <h2>Carta</h2>
     <div class="grid">
       @for (item of products(); track item.id) {
@@ -247,5 +335,13 @@
       <button type="button" class="secondary" (click)="addOption()">Añadir opción</button
       ><button [disabled]="busy()">Guardar producto</button>
     </form>
+  </section>
+}
+
+@if (!branches().length && businesses().length && workspace() !== 'settings') {
+  <section class="empty-state">
+    <h2>Prepara tu primera sucursal</h2>
+    <p>Revisa tu afiliación y configura una sucursal para gestionar tu carta y tus pedidos.</p>
+    <button (click)="workspace.set('settings')">Ir a configuración</button>
   </section>
 }

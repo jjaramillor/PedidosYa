@@ -10,6 +10,41 @@ import { Api } from './api';
   styleUrl: './app.css',
 })
 export class MerchantWorkspace implements OnInit {
+  workspace = signal('orders');
+  orderFilter = signal('active');
+  readonly orderStages = [
+    { id: 'active', label: 'En curso' },
+    { id: 'confirmed', label: 'Nuevos' },
+    { id: 'preparing', label: 'En cocina' },
+    { id: 'ready', label: 'Listos' },
+    { id: 'history', label: 'Historial' },
+  ];
+  ordersFor(stage: string) {
+    const active = ['confirmed', 'accepted', 'preparing', 'ready'];
+    return this.orders().filter((item) =>
+      stage === 'active'
+        ? active.includes(item.state)
+        : stage === 'history'
+          ? !active.includes(item.state)
+          : stage === 'preparing'
+            ? ['accepted', 'preparing'].includes(item.state)
+            : item.state === stage,
+    );
+  }
+  stateLabel(state: string) {
+    const labels: Record<string, string> = {
+      confirmed: 'Nuevo',
+      accepted: 'Aceptado',
+      preparing: 'En cocina',
+      ready: 'Listo para retiro',
+      in_transit: 'En camino',
+      delivered: 'Entregado',
+      closed: 'Completado',
+      cancelled: 'Cancelado',
+      pending_payment: 'Pago pendiente',
+    };
+    return labels[state] || state;
+  }
   editingBranchId = '';
   editBranch() {
     const item = this.branches().find((branch) => branch.id === this.branchId);

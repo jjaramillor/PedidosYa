@@ -136,3 +136,16 @@ Se canceló exclusivamente ese fixture desde Administración con el motivo «Cie
 Dos correcciones surgieron de la validación: los botones de las tarjetas permiten salto de línea para no desbordar su ancho; los repartidores incluyen el correo junto al nombre en Administración y en el selector de reasignación. Antes de la corrección el botón de suspensión excedía el borde de su tarjeta; después, la inspección geométrica no detectó desbordamiento horizontal en las filas revisadas.
 
 La compilación de producción Angular (`npm run build`) pasó con los avisos CommonJS existentes de Leaflet y Mercado Pago. Este avance modifica únicamente presentación web; se conservan las 17 pruebas de integración MVP del avance anterior y no se repitieron ni se recompiló Android. F1-05 conserva pendientes el rechazo desde móvil y el bloqueo posterior al retiro desde interfaz, ya cubiertos por integración.
+
+
+## Primera etapa de UI y UX
+
+Implementación del 23 de noviembre de 2026: base visual con tonos neutros, verde profundo y acento terracota; portada gastronómica con ilustración SVG local, tarjetas de restaurantes y una búsqueda principal. Los filtros adicionales permanecen disponibles en un desplegable. La dirección de búsqueda ocupa una franja propia y cambiar una dirección guardada repite la consulta. Se conserva la información de precio, tiempo, distancia y valoración; la ausencia de puntuación se muestra como «Nuevo».
+
+El comercio abre en Pedidos y separa Carta y Configuración. Los filtros muestran nuevos, cocina, listos e historial con contadores. Los estados están traducidos y los pedidos muestran una referencia abreviada. El selector de sucursal queda disponible en las tres secciones; las acciones de negocio y permisos del backend no se modifican. Un comercio sin sucursal recibe orientación para configurarla.
+
+Comprobaciones por navegador contra la API local: búsqueda sin coincidencias y restauración del resultado, apertura de filtros, navegación entre las tres secciones del comercio, lista de historial y detalle de un pedido cancelado sin acciones de preparación. No se crearon compras ni se modificaron pedidos para esta revisión. Se comprobó que el ancho de página no excediera el viewport en escritorio (1280 px) y móvil (390 px); en móvil la navegación principal permite desplazamiento horizontal dentro de su área. No equivale a una auditoría completa de accesibilidad ni a una nueva aceptación de checkout.
+
+Evidencia: [cliente escritorio](ui-cliente-minimalista.jpg), [cliente móvil](ui-cliente-movil.jpg), [comercio: historial adaptable](ui-comercio-minimalista.jpg), [comercio móvil](ui-comercio-movil.jpg). Las ilustraciones son decorativas y no representan fotografías de platos ofrecidos por los comercios.
+
+`npm run build` aprobado, sin avisos nuevos; permanecen los avisos CommonJS de Leaflet y Mercado Pago. Se formatearon los archivos editados con Prettier. Esta etapa cambia presentación y filtrado local; no se repitieron las pruebas del backend ni Flutter. Carrito, checkout, seguimiento, Administración y repartidor mantienen pendientes su rediseño específico en el TODO.

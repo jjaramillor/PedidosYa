@@ -47,6 +47,13 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 
 - [x] F1-07 Ocultar PIN al terminar la entrega y corregir el error de GPS tardío tras el cierre; regresiones automatizadas aprobadas.
 
+## UI y UX
+
+- [x] UX-01 Primera etapa minimalista: portada gastronómica, búsqueda simplificada, filtros desplegables y navegación activa; comercio separado en Pedidos, Carta y Configuración, con estados y filtros por etapa. Compilación y comprobación visual en escritorio y ancho móvil de 390 px. [Evidencia](docs/mvp/validacion-local.md#primera-etapa-de-ui-y-ux).
+- [ ] UX-02 Extender la presentación al carrito, checkout y seguimiento; verificar compra completa con el nuevo diseño.
+- [ ] UX-03 Separar áreas de Administración y aplicar la jerarquía visual al repartidor.
+- [ ] UX-04 Incorporar fotografías propias de los comercios, revisar accesibilidad integral y validar con usuarios del piloto.
+
 ## F2 Finanzas y compensaciones
 
 - [ ] F2-01 Probar devolución tras un pago ya capturado, con reintentos y auditoría.
