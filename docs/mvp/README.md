@@ -111,3 +111,5 @@ UI/UX: primera etapa minimalista aplicada a la portada del cliente y al espacio 
 App Flutter: primera adaptación minimalista y navegación separada para cliente y repartidor, instalada y revisada en Android; análisis sin observaciones y 20 pruebas aprobadas. [Evidencia](validacion-local.md#presentación-minimalista-en-la-app-flutter).
 
 F0-10: respuesta de renovación perdida cubierta por integración y móvil; la app comparte renovaciones concurrentes y ofrece nuevo OTP tras rechazo definitivo. 23 pruebas de identidad y 23 pruebas Flutter aprobadas; APK actualizado en el emulador. [Evidencia y límites](validacion-local.md#recuperación-tras-perder-la-respuesta-de-renovación).
+
+F1-03c: seguimiento web con estado visible, reconexión automática y recuperación manual comprobados por navegador; ocho pruebas de seguimiento y compilación Angular aprobadas. [Evidencia y alcance pendiente](validacion-local.md#recuperación-del-seguimiento-web).

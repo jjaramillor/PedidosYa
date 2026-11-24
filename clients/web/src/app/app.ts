@@ -5,6 +5,7 @@ import { Api } from './api';
 import { MerchantWorkspace } from './merchant';
 import { AdminWorkspace } from './admin';
 import { Tracking } from './tracking';
+import { TrackingRefresh } from './tracking-session';
 import { CardPayment } from './card-payment';
 import { LocationMap } from './location-map';
 @Component({
@@ -16,7 +17,18 @@ import { LocationMap } from './location-map';
 export class App implements OnInit {
   private api = inject(Api);
   private tracking = inject(Tracking);
-  private refreshingOrder = false;
+  readonly trackingState = this.tracking.state;
+  readonly trackingText = {
+    idle: 'Seguimiento detenido',
+    connecting: 'Conectando seguimiento…',
+    live: 'Conectado · actualizaciones en vivo',
+    reconnecting: 'Reconectando… La información puede estar desactualizada.',
+    offline: 'Sin seguimiento en vivo. Actualiza para volver a conectar.',
+  };
+  private orderRefresh = new TrackingRefresh(async () => {
+    const id = this.selectedOrder()?.id;
+    if (id) await this.refreshOrder(id);
+  });
   cardToken = '';
   async onCardToken(token: string) {
     if (!this.checkoutOperation || !this.cardToken) this.cardToken = token;
@@ -483,9 +495,7 @@ export class App implements OnInit {
     }
     try {
       await this.tracking.watch(id, () => {
-        if (this.refreshingOrder) return;
-        this.refreshingOrder = true;
-        this.refreshOrder(id).finally(() => (this.refreshingOrder = false));
+        void this.orderRefresh.request();
       });
     } catch {
       this.notice.set('Seguimiento en tiempo real no disponible. Puedes actualizar el pedido.');
@@ -493,23 +503,24 @@ export class App implements OnInit {
   }
   private syncOrderSummary(order: any) {
     this.orders.update((items) =>
-      items.map((item) => item.id === order.id ? { ...item, state: order.state } : item),
+      items.map((item) => (item.id === order.id ? { ...item, state: order.state } : item)),
     );
   }
   private async refreshOrder(id: string) {
     try {
       const order = await this.api.call('/orders/' + id);
-      if (this.selectedOrder()?.id === id) {
-        this.selectedOrder.set(order);
-        this.syncOrderSummary(order);
-        try {
-          this.delivery.set(await this.api.call('/deliveries/' + id));
-        } catch {
-          this.delivery.set(null);
-        }
-      }
+      let delivery = null;
+      try {
+        delivery = await this.api.call('/deliveries/' + id);
+      } catch {}
+      // Both reads may finish after navigation to another order or logout.
+      if (this.selectedOrder()?.id !== id) return;
+      this.selectedOrder.set(order);
+      this.syncOrderSummary(order);
+      this.delivery.set(delivery);
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'No se pudo actualizar el pedido.');
+      if (this.selectedOrder()?.id === id)
+        this.error.set(error instanceof Error ? error.message : 'No se pudo actualizar el pedido.');
     }
   }
   async cancelOrder() {

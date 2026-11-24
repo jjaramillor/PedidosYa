@@ -423,7 +423,18 @@
       @if (selectedOrder()) {
         <h2>{{ selectedOrder().quote.branch.name }}</h2>
         <p class="status">{{ state(selectedOrder().state) }}</p>
-        <button class="secondary" (click)="run(openOrder.bind(this, selectedOrder().id))">
+        <p
+          class="connection-status"
+          role="status"
+          [class.connection-warning]="trackingState() !== 'live'"
+        >
+          {{ trackingText[trackingState()] }}
+        </p>
+        <button
+          class="secondary"
+          [disabled]="busy()"
+          (click)="run(openOrder.bind(this, selectedOrder().id))"
+        >
           Actualizar seguimiento
         </button>
         <p>Entrega en {{ selectedOrder().quote.address.street }}</p>

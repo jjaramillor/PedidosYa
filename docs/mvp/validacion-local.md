@@ -177,3 +177,21 @@ Pruebas móviles nuevas: respuesta de refresh perdida después de rotación y re
 Validación: 23 pruebas `EpicOneIntegrationTests` aprobadas, cero omitidas (`TestResults/refresh-response-loss.trx`); análisis Flutter sin observaciones y 23 pruebas Flutter aprobadas (`D:/Development/PedidosYa/temp/refresh-mobile-tests.log`). No se ensayó pérdida física de red en el emulador ni se cerró F1-03. Este avance no modifica backend productivo ni la web.
 
 APK debug recompilado e instalado como actualización en el emulador: `.artifacts/mobile/Delivery-emulator-refresh-recovery-debug.apk`. Log local: `D:/Development/PedidosYa/temp/mvp-refresh-recovery-build.log`. La instalación no constituye validación visual de un corte de red.
+
+
+## Recuperación del seguimiento web
+
+Avance F1-03c del 23 de noviembre de 2026. La pantalla muestra conectando, conectado, reconectando o sin seguimiento en vivo, con una advertencia de posible información desactualizada durante la interrupción. SignalR reintenta con esperas de 0, 5, 10 y 30 segundos; agotadas estas, la actualización manual crea una conexión nueva sin recargar la página. Se conserva la comprobación de sesión durante la reconexión.
+
+Cada conexión queda asociada a la generación del pedido seleccionado. Las conexiones retiradas no ejecutan lecturas ni resuscripciones para el pedido siguiente. Una conexión inicial fallida tampoco queda retenida como si estuviera iniciada. Si la suscripción es rechazada, no se anuncia seguimiento en vivo. Tras suscribirse o resuscribirse se consulta nuevamente el pedido. Los eventos que llegan durante una lectura producen una lectura final adicional, en lugar de descartarse. Las respuestas tardías de pedido y entrega se aplican solo si el pedido sigue seleccionado.
+
+Prueba visual contra la API local, usando exclusivamente el pedido ficticio cancelado `4612be99-91dd-4450-a44e-76cae48f5cb2`:
+
+1. Abrir su detalle mostró «Conectado · actualizaciones en vivo».
+2. Detener la API produjo «Reconectando… La información puede estar desactualizada».
+3. El primer reinicio, con compilación, excedió la ventana de reintentos; se mostró «Sin seguimiento en vivo». Con la API disponible, «Actualizar seguimiento» recuperó la conexión sin recargar la página.
+4. En una segunda interrupción se reinició el binario ya compilado. Sin pulsar actualizar, SignalR restableció WebSocket y la pantalla volvió a «Conectado · actualizaciones en vivo».
+
+La API quedó ejecutándose con el mismo entorno local de validación y disponibilidad comprobada. No se editaron pedidos ni posiciones. Evidencia: [reconectando](seguimiento-reconectando.jpg) y [recuperado](seguimiento-recuperado.jpg). El mapa conserva la dirección sintética del fixture; este ensayo no demuestra un movimiento GPS ni un cambio de estado ocurrido durante la desconexión. Esa comprobación permanece abierta en F1-03.
+
+Validación automatizada: `npm run test:tracking`, ocho pruebas aprobadas, cubriendo resuscripción/lectura tras reconectar, recuperación manual, fallo inicial, aislamiento de conexiones anteriores, rechazo de suscripción, cierre durante creación, eventos durante lectura y recuperación tras fallo de lectura. El ejecutor usa TypeScript y Node ya instalados, sin dependencias nuevas. `npm run build` aprobado; se mantienen los avisos CommonJS existentes de Leaflet y Mercado Pago. No cambió el backend ni Flutter y no se repitieron sus suites.

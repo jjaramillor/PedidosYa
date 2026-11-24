@@ -35,7 +35,8 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 
 - [x] F1-01 Verificar consultas HTTP concurrentes con sesiones separadas de cliente, comercio, repartidor, soporte y tercero ajeno; aislamiento de PIN, revocación de permisos y cierre de una sesión sin afectar otras. [Evidencia](docs/mvp/validacion-local.md#sesiones-independientes-y-control-por-rol).
 - [x] F1-02 Cliente, comercio y soporte en navegadores aislados, con repartidor Android: pedido completo desde compra hasta cierre sandbox, con actualización en vivo y caso atendido por el operador. [Evidencia](docs/mvp/validacion-local.md#recorrido-simultáneo-por-interfaces).
-- [ ] F1-03 Comprobar actualizaciones SignalR y mapa en vivo; reconexión sin estados obsoletos ni filtración entre pedidos.
+- [ ] F1-03 Comprobar actualizaciones SignalR y mapa en vivo; falta verificar visualmente cambios de estado y GPS producidos durante la desconexión.
+- [x] F1-03c Mostrar estado de conexión, recuperar seguimiento manualmente tras agotar reintentos y automáticamente tras reinicio de API; coalescer eventos sin perder la lectura final y aislar conexiones retiradas. Ocho pruebas de seguimiento y validación visual aprobadas. [Evidencia](docs/mvp/validacion-local.md#recuperación-del-seguimiento-web).
 - [x] F1-03b Verificar cambios en vivo entre comercio, cliente y Android: aceptación, preparación, retiro, ruta, ETA y cierre. La reconexión visual sigue pendiente. [Evidencia](docs/mvp/validacion-local.md#recorrido-simultáneo-por-interfaces).
 - [x] F1-03a Verificar el transporte SignalR con WebSockets reales de integración: suscripción autorizada, aislamiento de pedidos, baja, resuscripción y eliminación de una sesión cerrada. [Evidencia](docs/mvp/validacion-local.md#tiempo-real-con-websockets).
 - [ ] F1-04 Ejecutar alta/revisión documental, suspensión y reactivación desde sus interfaces. Pendientes: flujo del repartidor y comprobación de descarga/revisión documental.
