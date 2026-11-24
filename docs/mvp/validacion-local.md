@@ -52,3 +52,42 @@ El recorrido simultáneo por interfaces F1-02 se intentó con cliente IAB en loc
 Esta prueba cubre transporte y autorización de eventos publicados de forma controlada; la recuperación automática del cliente Angular y los cambios de estado vistos simultáneamente en pantalla requieren su propia aceptación.
 
 Resultado: 14 pruebas de integración MVP aprobadas, cero fallos y cero omitidas contra PostGIS/Redis. Evidencia local: `TestResults/mvp-tiempo-real.trx`. La suite completa de la solución y las pruebas Flutter no se repitieron en este avance, que modifica únicamente pruebas y seguimiento documental.
+
+
+## Recorrido simultáneo por interfaces
+
+Aceptación realizada el 23 de noviembre de 2026. Pedido `622a8dd0-ab3a-41b9-8a96-533e7979561d`, Sucursal QA 41d27e69, tarjeta sandbox, total S/32,56.
+
+Las sesiones permanecieron abiertas simultáneamente: cliente en IAB `localhost:4200`, comercio en IAB `[::1]:4200`, operador en Chrome y repartidor en el emulador Android. El operador usó la cuenta administradora ficticia existente; el control de un rol de soporte limitado se verifica por separado en las pruebas de aislamiento HTTP.
+
+Recorrido observado:
+
+1. Cliente añadió un menú, cotizó y confirmó desde la web. Una dirección fuera de la zona fue rechazada; al seleccionar la dirección QA correspondiente se obtuvo una cotización válida.
+2. Comercio ingresó por OTP de Mailpit, aceptó, preparó y marcó listo. El cliente reflejó aceptación y los estados posteriores sin pulsar actualizar seguimiento.
+3. Android recuperó su sesión, declaró disponibilidad, recibió y aceptó la oferta del pedido nuevo, y registró llegada.
+4. El repartidor abrió «Solicitar ayuda con esta entrega». El operador recibió el caso, lo atendió y guardó una resolución con estado `resolved` desde Chrome.
+5. El PIN de retiro se consultó en la interfaz del comercio. Android confirmó retiro e inicio de ruta.
+6. El repartidor activó ubicación. El cliente mostró «En camino» y ETA de cinco minutos. Se persistieron tres posiciones sintéticas.
+7. El PIN de entrega se obtuvo en la interfaz del cliente; Android confirmó entrega. La web recibió «Completado» sin actualización manual y el backend quedó `closed` / `delivered` / pago `captured`.
+
+La sucursal QA utiliza coordenadas ficticias fuera de Lima; el GPS del emulador se situó en esa zona para el ensayo. No se editaron estados en la base para avanzar el negocio. Las consultas SQL se usaron solo para identificar la ubicación del fixture y comprobar los resultados.
+
+| Resultado financiero | PEN |
+|---|---:|
+| Captura sandbox | 32,56 |
+| Comercio | 21,25 |
+| Repartidor | 5,56 |
+| Plataforma | 5,75 |
+
+Evidencia: [cliente completado](simultaneo-cliente-completado.jpg), [Android en ruta](simultaneo-android-ruta.jpg), [Android entregado](simultaneo-android-entregado.jpg). La captura del cliente omite el área que mostraba el código de entrega.
+
+Correcciones derivadas de la prueba:
+
+- La API deja de devolver el PIN de retiro tras recoger y ambos códigos cuando la entrega termina. Las regresiones comprueban entrega y devolución, incluso con acceso de operador.
+- Un envío GPS pendiente podía recibir el rechazo esperado del backend tras entregar y mostrar un falso error. El temporizador se cancela inmediatamente después de confirmar el cierre y sus respuestas tardías no sustituyen el resultado de la acción. Un test de interfaz simula expresamente esa respuesta tardía.
+
+Validación posterior: 14 pruebas de integración MVP aprobadas (`TestResults/mvp-simultaneo.trx`), análisis Flutter sin observaciones y 17 pruebas Flutter aprobadas. El recorrido completo se ejecutó antes de estas dos correcciones; sus regresiones se comprobaron automatizadamente.
+
+F1-02 queda completada. La reconexión visual tras pérdida de red, la consulta de la resolución desde Android, participantes/suspensiones y reasignaciones permanecen pendientes. Este ensayo no aprueba pagos reales ni las 44 funcionalidades completas.
+
+El APK corregido se compiló e instaló como `.artifacts/mobile/Delivery-emulator-simultaneo-debug.apk`; log local `D:/Development/PedidosYa/temp/mvp-simultaneo-build.log`.

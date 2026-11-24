@@ -52,8 +52,8 @@ public sealed class DeliveryService(NpgsqlDataSource source,IOrderDirectory orde
    await using var reader=await query.ExecuteReaderAsync(ct);if(!await reader.ReadAsync(ct))throw new ApiException(404,"delivery_not_assigned","Entrega todavía no asignada.");
    courier=reader.GetGuid(0);state=reader.GetString(1);
    var merchant=await merchants.CanOperateAsync(caller.Id,item.BranchId,ct);
-   pickup=(merchant||caller.Can("orders.operate"))?pins.Unprotect(reader.GetString(2)):null;
-   drop=(item.CustomerId==caller.Id||caller.Can("orders.operate"))?pins.Unprotect(reader.GetString(3)):null;
+   pickup=(state is "assigned" or "arrived")&&(merchant||caller.Can("orders.operate"))?pins.Unprotect(reader.GetString(2)):null;
+   drop=(state is "assigned" or "arrived" or "picked_up" or "in_transit" or "incident")&&(item.CustomerId==caller.Id||caller.Can("orders.operate"))?pins.Unprotect(reader.GetString(3)):null;
    evidence=reader.IsDBNull(4)?null:reader.GetGuid(4);
   }
   Coordinate? location=null;

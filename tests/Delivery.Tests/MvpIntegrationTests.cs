@@ -114,6 +114,8 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         var pin=(await Service<DeliveryService>().GetAsync(customerCaller,order.Id,Ct)).DeliveryPin;
         await Service<DeliveryService>().ActionAsync(courier,order.Id,new(Guid.NewGuid(),"delivered",pin,null,"delivery verified",method=="cash"),Ct);await Drain();
         Assert.Equal("closed",(await Service<OrderService>().GetAsync(order.Id,Ct)).State);
+        Assert.Null((await Service<DeliveryService>().GetAsync(owner,order.Id,Ct)).PickupPin);
+        Assert.Null((await Service<DeliveryService>().GetAsync(customerCaller,order.Id,Ct)).DeliveryPin);
         Assert.Equal(quote.Total,(await Service<PaymentService>().InfoAsync(order.Id,Ct)).Captured);
         Assert.Equal(0,await fixture.CountAsync("SELECT count(*) FROM (SELECT voucher_id FROM ledger.lines GROUP BY voucher_id HAVING sum(amount)<>0) imbalance"));
         await Assert.ThrowsAsync<ApiException>(()=>Service<DeliveryService>().UpdateLocationAsync(courier,order.Id,new(-12.05,-77.05),Ct));
@@ -194,6 +196,8 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
             Service<DeliveryService>().ActionAsync(courier,order,terminal,Ct));await Drain();
         await Service<DeliveryService>().ActionAsync(courier,order,terminal,Ct);await Drain();
         Assert.Equal(resume?"closed":"returned",(await Service<OrderService>().GetAsync(order,Ct)).State);
+        var terminalPins=await Service<DeliveryService>().GetAsync(scenario.Admin,order,Ct);
+        Assert.Null(terminalPins.PickupPin);Assert.Null(terminalPins.DeliveryPin);
         var payment=await Service<PaymentService>().InfoAsync(order,Ct);
         Assert.Equal(resume?"captured":"cancelled",payment.State);
         Assert.Equal(resume?scenario.Quote.Total:0,payment.Captured);

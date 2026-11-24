@@ -22,9 +22,10 @@ class DeliveryApp extends StatelessWidget {
 }
 
 class CourierHome extends StatefulWidget {
-  const CourierHome({super.key, this.api, this.now});
+  const CourierHome({super.key, this.api, this.now, this.positionProvider});
   final DeliveryApi? api;
   final DateTime Function()? now;
+  final Future<Position> Function()? positionProvider;
   @override
   State<CourierHome> createState() => _CourierHomeState();
 }
@@ -151,6 +152,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   }
 
   Future<Position> position() async {
+    if (widget.positionProvider != null) return widget.positionProvider!();
     if (!await Geolocator.isLocationServiceEnabled()) {
       throw Exception('Activa la ubicación del dispositivo.');
     }
@@ -260,15 +262,15 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       'cashCollected': cashCollected,
       'reason': reason.text.trim()
     });
-    pin.clear();
-    await open(order!['id']);
-    await reload();
     if (['delivered', 'returned', 'cancelled'].contains(state)) {
       gps?.cancel();
       gps = null;
       trackedOrder = null;
       evidence = null;
     }
+    pin.clear();
+    await open(order!['id']);
+    await reload();
   }
 
   Future<void> requestSupport() async {
@@ -310,6 +312,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       try {
         await sendLocation(id);
       } catch (exception) {
+        if (busy || trackedOrder != id) return;
         gps?.cancel();
         gps = null;
         trackedOrder = null;

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -129,6 +131,54 @@ void main() {
     expect(button.onPressed, isNull);
     await tester.pumpWidget(const SizedBox());
   });
+  testWidgets(
+      'A late GPS rejection cannot turn completed delivery into an error',
+      (tester) async {
+    final api = DelayedLocationApi()..state = 'in_transit';
+    await tester.pumpWidget(MaterialApp(
+        home: CourierHome(
+            api: api,
+            positionProvider: () async => Position(
+                latitude: -12.04,
+                longitude: -77.04,
+                timestamp: DateTime.now(),
+                accuracy: 1,
+                altitude: 0,
+                altitudeAccuracy: 1,
+                heading: 0,
+                headingAccuracy: 1,
+                speed: 0,
+                speedAccuracy: 1))));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Pedido order-1'), 300);
+    await tester.tap(find.text('Pedido order-1'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Motivo / observación'), 'Prueba GPS');
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+        find.text('Compartir ubicación durante esta entrega'), 150,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Compartir ubicación durante esta entrega'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 20));
+    await tester.pump();
+    expect(api.locations, 2);
+    await tester.ensureVisible(find.text('Confirmar entrega'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar entrega'));
+    await tester.pumpAndSettle();
+    api.pending.completeError(
+        DeliveryApiException(409, 'El seguimiento no está activo.'));
+    await tester.pumpAndSettle();
+    expect(find.text('Estado: delivered'), findsOneWidget);
+    expect(find.textContaining('El seguimiento no está activo'), findsNothing);
+    await tester.pump(const Duration(seconds: 21));
+    expect(api.locations, 2);
+    await tester.pumpWidget(const SizedBox());
+  });
 }
 
 class CourierApi extends DeliveryApi {
@@ -192,6 +242,21 @@ class ExpiringOfferApi extends CourierApi {
               DateTime.now().add(const Duration(seconds: 2)).toIso8601String()
         }
       ];
+    }
+    return super.call(path, method: method, body: body, retry: retry);
+  }
+}
+
+class DelayedLocationApi extends CourierApi {
+  int locations = 0;
+  final pending = Completer<dynamic>();
+  @override
+  Future<dynamic> call(String path,
+      {String method = 'GET', Object? body, bool retry = true}) async {
+    if (path == '/deliveries/order-1/location') {
+      locations++;
+      if (locations > 1) return pending.future;
+      return null;
     }
     return super.call(path, method: method, body: body, retry: retry);
   }
