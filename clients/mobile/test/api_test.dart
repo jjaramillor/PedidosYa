@@ -31,6 +31,35 @@ void main() {
     });
   });
 
+  test('offer clock follows server time instead of a drifting device clock',
+      () async {
+    final api = DeliveryApi(
+        baseUrl: 'https://example.test',
+        client: MockClient((r) async => http.Response('{}', 200,
+            headers: {'date': 'Mon, 01 Jan 2001 12:00:00 GMT'})));
+    addTearDown(api.dispose);
+    await api.call('/clock-fixture');
+    expect(api.serverNow.year, 2001);
+    expect(api.serverNow.isBefore(DateTime.utc(2001, 1, 1, 12, 0, 3)), isTrue);
+    expect(api.serverNow.isAfter(DateTime.utc(2001, 1, 1, 12)), isTrue);
+  });
+
+  test(
+      'a malformed Date does not erase the last server clock or fail the response',
+      () async {
+    final api = DeliveryApi(
+        baseUrl: 'https://example.test',
+        client: MockClient((r) async => http.Response('{}', 200, headers: {
+              'date': r.url.path.endsWith('/valid')
+                  ? 'Mon, 01 Jan 2001 12:00:00 GMT'
+                  : 'invalid-date'
+            })));
+    addTearDown(api.dispose);
+    await api.call('/clock/valid');
+    await api.call('/clock/malformed');
+    expect(api.serverNow.year, 2001);
+  });
+
   test('refresh survives a network failure and succeeds on manual retry',
       () async {
     var online = false;

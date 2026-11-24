@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show HttpDate, HttpException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -18,6 +19,25 @@ class DeliveryApi {
   final http.Client _client;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   String? _access;
+  DateTime? _serverTime;
+  final _serverAge = Stopwatch();
+  DateTime get serverNow =>
+      _serverTime?.add(_serverAge.elapsed) ?? DateTime.now();
+  void _observeServerDate(String? value) {
+    if (value == null) return;
+    try {
+      // HTTP Date has second precision; retire offers conservatively at the boundary.
+      _serverTime = HttpDate.parse(value).add(const Duration(seconds: 1));
+      _serverAge
+        ..reset()
+        ..start();
+    } on HttpException {
+      // A malformed Date must not fail a successful business response.
+    } on FormatException {
+      // Keep the last trustworthy server clock.
+    }
+  }
+
   Future<void>? _refreshing;
   Future<dynamic> call(String path,
       {String method = 'GET', Object? body, bool retry = true}) async {
@@ -31,6 +51,7 @@ class DeliveryApi {
     if (body != null) request.body = jsonEncode(body);
     final response = await http.Response.fromStream(
         await _client.send(request).timeout(const Duration(seconds: 30)));
+    _observeServerDate(response.headers['date']);
     if (response.statusCode == 401 &&
         retry &&
         path != '/identity/sessions/refresh' &&

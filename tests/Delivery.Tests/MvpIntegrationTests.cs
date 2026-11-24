@@ -44,7 +44,7 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
 
     private sealed record DeliveryScenario(Caller Admin,AuthSession Customer,Caller Owner,Caller Courier,AuthSession CourierSession,QuoteSnapshot Quote,OrderView Order)
     {public AuthSession OwnerSession {get;init;}=null!;}
-    private async Task<DeliveryScenario> PrepareDelivery(string method,bool arrive=true,bool assign=true)
+    private async Task<DeliveryScenario> PrepareDelivery(string method,bool arrive=true,bool assign=true,bool? merchantFundsDiscount=null)
     {
         await fixture.ResetAsync();
         var admin=CallerFor(await Register("admin@mvp.test"),true);
@@ -60,7 +60,9 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         await Service<DispatchService>().ApplyAsync(courier,new("bicycle",[await Document(courier)]),Ct);
         await Service<DispatchService>().DecideAsync(admin,courier.Id,new("approved","verified documents"),Ct);
         await Service<DispatchService>().AvailabilityAsync(courier,new(true,zone,new(-12.04,-77.04)),Ct);
-        var quote=await Service<PricingService>().QuoteAsync(customerCaller.Id,address,branch,[new(product,1,[])],null,200,Ct);
+        if(merchantFundsDiscount is bool funded)
+            await Service<PricingService>().SaveCouponAsync(admin,Guid.NewGuid(),new("FINANCEQA",branch,fixture.Clock.GetUtcNow().AddMinutes(-1),fixture.Clock.GetUtcNow().AddHours(1),0,2000,1000,10,1,funded,true,"coupon finance QA"),Ct);
+        var quote=await Service<PricingService>().QuoteAsync(customerCaller.Id,address,branch,[new(product,1,[])],merchantFundsDiscount is null?null:"FINANCEQA",200,Ct);
         var operation=Guid.NewGuid();var input=new CheckoutInput(operation,quote.Id,method,method=="card"?ModuleSql.Encode(new CardToken("sandbox-approved","visa",null)):null);
         var order=await Service<OrderService>().PlaceAsync(customerCaller,input,Ct);
         Assert.Equal(order.Id,(await Service<OrderService>().PlaceAsync(customerCaller,input,Ct)).Id);
@@ -546,6 +548,84 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         Assert.Equal(vouchers, await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers"));
         Assert.Equal(messages, await fixture.CountAsync("SELECT count(*) FROM platform.outbox"));
         Assert.Equal(0, await fixture.CountAsync("SELECT count(*) FROM payments.refunds"));
+    }
+
+    private static System.Text.Json.JsonElement Json(object value)=>System.Text.Json.JsonSerializer.SerializeToElement(value);
+
+    [Fact]
+    public async Task Cash_collection_settlement_and_payment_reference_are_idempotent_and_audited()
+    {
+        var s=await PrepareDelivery("cash");await StartRoute(s);
+        var pin=(await Service<DeliveryService>().GetAsync(CallerFor(s.Customer),s.Order.Id,Ct)).DeliveryPin;
+        await Service<DeliveryService>().ActionAsync(s.Courier,s.Order.Id,new(Guid.NewGuid(),"delivered",pin,null,"cash delivered",true),Ct);await Drain();
+        var ledger=Service<LedgerService>();
+        var pending=Json(await ledger.StatementAsync(s.Admin,"courier",s.Courier.Id,Ct)).GetProperty("Pending").GetInt64();
+        Assert.True(pending<0);
+        var denied=await Assert.ThrowsAsync<ApiException>(()=>ledger.CashCollectionAsync(s.Courier,s.Courier.Id,Guid.NewGuid(),-pending,"QA","QA",Ct));Assert.Equal(403,denied.StatusCode);
+        var excess=await Assert.ThrowsAsync<ApiException>(()=>ledger.CashCollectionAsync(s.Admin,s.Courier.Id,Guid.NewGuid(),-pending+1,"QA","QA",Ct));Assert.Equal("cash_collection_exceeds_debt",excess.Code);
+        var operation=Guid.NewGuid();
+        await Task.WhenAll(Enumerable.Range(0,2).Select(_=>ledger.CashCollectionAsync(s.Admin,s.Courier.Id,operation,-pending,"FICTICIO-CASH-01","cash collection QA",Ct)));
+        Assert.Equal(0,Json(await ledger.StatementAsync(s.Admin,"courier",s.Courier.Id,Ct)).GetProperty("Pending").GetInt64());
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers WHERE kind='cash-collection'"));
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM platform.audit WHERE action='cash.collected'"));
+        var settlement=Guid.NewGuid();var merchant=s.Quote.Branch.MerchantId;
+        await Task.WhenAll(Enumerable.Range(0,2).Select(_=>ledger.CloseSettlementAsync(s.Admin,"merchant",merchant,settlement,"settlement QA",Ct)));
+        await ledger.MarkPaidAsync(s.Admin,settlement,"FICTICIO-TRANSFER-01","already paid externally QA",Ct);
+        await ledger.MarkPaidAsync(s.Admin,settlement,"FICTICIO-TRANSFER-02","retry must not overwrite",Ct);
+        var statement=Json(await ledger.StatementAsync(s.Owner,"merchant",merchant,Ct));
+        Assert.Equal(0,statement.GetProperty("Pending").GetInt64());
+        var item=Assert.Single(statement.GetProperty("Settlements").EnumerateArray());
+        Assert.Equal("FICTICIO-TRANSFER-01",item.GetProperty("ExternalReference").GetString());
+        Assert.NotEqual(System.Text.Json.JsonValueKind.Null,item.GetProperty("PaidAt").ValueKind);
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM platform.audit WHERE action='settlement.closed'"));
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM platform.audit WHERE action='settlement.paid'"));
+        Assert.Equal(0,await fixture.CountAsync("SELECT count(*) FROM (SELECT voucher_id FROM ledger.lines GROUP BY voucher_id HAVING sum(amount)<>0) unbalanced"));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Funded_coupon_distribution_and_adjustments_preserve_closed_settlements(bool merchantFunded)
+    {
+        var s=await PrepareDelivery("card",merchantFundsDiscount:merchantFunded);await StartRoute(s);
+        var pin=(await Service<DeliveryService>().GetAsync(CallerFor(s.Customer),s.Order.Id,Ct)).DeliveryPin;
+        await Service<DeliveryService>().ActionAsync(s.Courier,s.Order.Id,new(Guid.NewGuid(),"delivered",pin,null,"coupon delivered"),Ct);await Drain();
+        Assert.Equal(500,s.Quote.Discount);Assert.Equal(merchantFunded,s.Quote.MerchantFundsDiscount);
+        var distribution=LedgerService.Distribute(s.Quote);
+        Assert.Equal(merchantFunded?1700:2125,distribution.Merchant);
+        Assert.Equal(s.Quote.CourierPay+200,distribution.Courier);
+        Assert.Equal(s.Quote.Total,distribution.Merchant+distribution.Courier+distribution.Platform);
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM pricing.coupon_uses"));
+        var ledger=Service<LedgerService>();var settlement=Guid.NewGuid();
+        await ledger.CloseSettlementAsync(s.Admin,"courier",s.Courier.Id,settlement,"close before adjustment",Ct);
+        await ledger.MarkPaidAsync(s.Admin,settlement,"FICTICIO-COUPON-01","external fixture reference",Ct);
+        var before=Json(await ledger.StatementAsync(s.Courier,"courier",s.Courier.Id,Ct)).GetProperty("Settlements")[0].GetRawText();
+        var incentive=Guid.NewGuid();await ledger.IncentiveAsync(s.Admin,s.Order.Id,s.Courier.Id,incentive,101,"incentive QA",Ct);
+        await ledger.IncentiveAsync(s.Admin,s.Order.Id,s.Courier.Id,incentive,101,"retry QA",Ct);
+        await Service<PaymentService>().RefundAsync(s.Admin,s.Order.Id,new(Guid.NewGuid(),s.Quote.Total,"full after settlement QA"),Ct);await Drain();
+        var after=Json(await ledger.StatementAsync(s.Courier,"courier",s.Courier.Id,Ct));
+        Assert.Equal(before,after.GetProperty("Settlements")[0].GetRawText());
+        Assert.Equal(101-distribution.Courier,after.GetProperty("Pending").GetInt64());
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM ledger.vouchers WHERE kind='incentive'"));
+        Assert.Equal(0,await fixture.CountAsync("SELECT count(*) FROM (SELECT voucher_id FROM ledger.lines GROUP BY voucher_id HAVING sum(amount)<>0) unbalanced"));
+    }
+
+    [Theory]
+    [InlineData("card")]
+    [InlineData("cash")]
+    public async Task Pending_offer_previews_show_pay_and_distances_without_customer_address(string method)
+    {
+        var s=await PrepareDelivery(method,assign:false);
+        var offer=Assert.Single(await Service<DispatchService>().OffersAsync(s.Courier,Ct));
+        Assert.NotNull(offer.Preview);Assert.Equal(s.Quote.Branch.Name,offer.Preview.RestaurantName);
+        Assert.Equal(0,offer.Preview.PickupKilometers);Assert.True(offer.Preview.DeliveryKilometers>0);
+        Assert.Equal(s.Quote.CourierPay+s.Quote.Tip,offer.Preview.EstimatedEarnings);
+        Assert.Equal(method=="cash"?s.Quote.Total:0,offer.Preview.CashToCollect);
+        var json=System.Text.Json.JsonSerializer.Serialize(offer);
+        Assert.DoesNotContain(s.Quote.Address.Street,json);Assert.DoesNotContain("Latitude",json);Assert.DoesNotContain("DeliveryPin",json);
+        Assert.Empty(await Service<DispatchService>().OffersAsync(CallerFor(s.Customer),Ct));
+        await Service<DispatchService>().DecideOfferAsync(s.Courier,offer.Id,false,Ct);
+        Assert.Null(Assert.Single(await Service<DispatchService>().OffersAsync(s.Courier,Ct)).Preview);
     }
 
     private sealed class SnapshotGateway(GatewayPayment snapshot) : IPaymentGateway

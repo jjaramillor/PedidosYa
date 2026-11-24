@@ -1,6 +1,6 @@
 # TODO del MVP
 
-Control de trabajo actualizado el 23 de noviembre de 2026. Fuente de alcance: las 44 funcionalidades con Entrega = MVP de la sección 7 del documento original, incluyendo las tres «Debería».
+Control de trabajo actualizado el 24 de noviembre de 2026. Fuente de alcance: las 44 funcionalidades con Entrega = MVP de la sección 7 del documento original, incluyendo las tres «Debería».
 
 Una casilla marcada significa que la tarea concreta dispone de evidencia. No equivale a aceptación de todo su dominio ni a autorización de producción. Las funcionalidades de la última sección se marcan únicamente cuando su aceptación integral está documentada.
 
@@ -41,7 +41,8 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 - [x] F1-03a Verificar el transporte SignalR con WebSockets reales de integración: suscripción autorizada, aislamiento de pedidos, baja, resuscripción y eliminación de una sesión cerrada. [Evidencia](docs/mvp/validacion-local.md#tiempo-real-con-websockets).
 - [ ] F1-04 Ejecutar alta/revisión documental, suspensión y reactivación desde sus interfaces. Pendientes: flujo del repartidor y comprobación de descarga/revisión documental.
 - [x] F1-04a Crear comercio, adjuntar documento ficticio, enviar afiliación, aprobar, suspender y reactivar desde web; propietario confirma estado aprobado. [Evidencia](docs/mvp/validacion-local.md#afiliación-y-reasignación-desde-web).
-- [ ] F1-05 Aceptar/rechazar oferta, probar reasignación antes del retiro y comprobar su bloqueo después del retiro. Reglas verificadas en integración; reasignación previa al retiro comprobada por interfaz. Pendientes: rechazo desde móvil y bloqueo posterior al retiro desde interfaz.
+- [ ] F1-05 Aceptar/rechazar oferta, probar reasignación antes del retiro y comprobar su bloqueo después del retiro. Reglas verificadas en integración; reasignación previa al retiro comprobada por interfaz. Pendiente: bloqueo posterior al retiro desde interfaz; rechazo desde móvil completado en F1-05c.
+- [x] F1-05c Rechazar desde Android una oferta sintética tras revisar su detalle; desaparición de la oferta y auditoría confirmadas. Sigue pendiente bloqueo posterior al retiro por interfaz. [Evidencia](docs/mvp/validacion-local.md#ofertas-informadas-en-android).
 - [x] F1-05b Reasignar antes del retiro desde Administración y comprobar auditoría; cerrar el pedido ficticio desde la misma interfaz. [Evidencia](docs/mvp/validacion-local.md#afiliación-y-reasignación-desde-web).
 - [x] F1-05a Verificar rechazo y nueva oferta, aceptación concurrente idempotente, reasignación autorizada antes del retiro, revocación del acceso anterior, bloqueo posterior y aislamiento GPS por API/eventos. [Evidencia](docs/mvp/validacion-local.md#reasignación-y-privacidad-de-ubicación).
 - [x] F1-06 Solicitud abierta desde Android, atendida y resuelta por el operador en Chrome, y resolución consultada por el repartidor tras reiniciar la app. [Evidencia](docs/mvp/validacion-local.md#respuesta-de-soporte-visible-en-android).
@@ -61,8 +62,8 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 - [x] F2-01 Probar devolución parcial y total tras captura sandbox, reintentos concurrentes, auditoría única, conflicto de clave y reversión contable sin duplicados. [Evidencia](docs/mvp/validacion-local.md#reembolsos-tras-captura).
 - [ ] F2-02 Verificar reembolso parcial y total por interfaz, límite de devolución y permisos de Finanzas/Soporte.
 - [x] F2-03 Probar conciliación con discrepancias, consultas repetidas y webhooks duplicados/tardíos mediante adaptador de pruebas; sandbox nunca se presenta como verificación bancaria. La pasarela real continúa en F4-04. [Evidencia](docs/mvp/validacion-local.md#conciliación-y-notificaciones-duplicadas).
-- [ ] F2-04 Ejecutar rendición de efectivo, cierre de liquidación y registro de pago con referencia externa, sin duplicar asientos.
-- [ ] F2-05 Validar reparto de descuentos, cupones, comisión, incentivos y ajustes de una liquidación ya cerrada.
+- [x] F2-04 Ejecutar rendición de efectivo, cierre de liquidación y referencia externa mediante integración: reintentos concurrentes, límite de deuda y auditoría sin duplicados. Registrar pago no ejecuta transferencia. [Evidencia](docs/mvp/validacion-local.md#rendición-liquidaciones-y-cupones).
+- [x] F2-05 Validar financiación de cupón por comercio/plataforma, comisión, propina, incentivo idempotente y reembolso posterior a liquidación pagada sin editar historia. [Evidencia](docs/mvp/validacion-local.md#rendición-liquidaciones-y-cupones).
 - [ ] F2-06 Acordar tratamiento de impuestos, comprobantes y procedimiento de transferencia; un registro manual no ejecuta un pago bancario.
 
 ## F3 Alcance y aceptación
@@ -72,8 +73,8 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 - [ ] F3-03 Resolver compatibilidad de vehículo/capacidad y preparación en asignación frente a RN-008.
 - [ ] F3-04 Definir GPS con pantalla bloqueada/segundo plano y verificar privacidad y retención.
 - [ ] F3-05 Precisar notificaciones del lanzamiento: correo, push y/o SMS, y aceptarlas en los canales elegidos.
-- [ ] F3-06 Mejorar información de las ofertas: restaurante, distancias y ganancia antes de aceptar.
-- [ ] F3-07 Relacionar las 20 RN con pruebas o decisiones explícitas de alcance.
+- [x] F3-06 Mostrar restaurante, distancias aproximadas, ganancia y efectivo por cobrar antes de aceptar; sin dirección del cliente. API y Flutter verificados, APK instalado y oferta revisada en emulador. [Evidencia](docs/mvp/validacion-local.md#ofertas-informadas-en-android).
+- [x] F3-07 Consolidar trazabilidad de las 20 RN con fuente, código/pruebas, excepciones de alcance y brechas explícitas. La matriz no acepta reglas aún incompletas ni resuelve decisiones de Producto/Finanzas. [Matriz](docs/mvp/reglas-negocio.md).
 - [ ] F3-08 Cerrar las 44 funcionalidades de la matriz inferior con criterios y evidencia; no marcar por la existencia de un endpoint.
 
 ## F4 Piloto y operación
@@ -83,7 +84,7 @@ Los responsables indican la función requerida; todavía no se han asignado pers
 - [ ] F4-03 Configurar entorno piloto con HTTPS, secretos privados y permisos mínimos.
 - [ ] F4-04 Verificar pasarela y webhooks, SMTP y proveedor de mapas en el entorno piloto.
 - [ ] F4-05 Probar alertas, trazas y métricas de fallos de pedido, Outbox y pagos.
-- [ ] F4-06 Ejecutar y documentar respaldo y restauración de base, documentos y claves.
+- [x] F4-06 Ejecutar ensayo local aislado de respaldo/restauración: 89 tablas, 19 documentos, claves y configuración privada; hashes y balance contable verificados. Repetir recuperación de aplicación y permisos en el piloto. [Procedimiento y límites](docs/mvp/respaldo-restauracion.md).
 - [ ] F4-07 Evaluar carga y capacidad del piloto con umbrales acordados.
 - [ ] F4-08 Producto, Operaciones y Finanzas aceptan el piloto con riesgos y alcance explícitos.
 

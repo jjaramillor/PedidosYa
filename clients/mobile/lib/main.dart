@@ -32,7 +32,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       DeliveryApi(
           baseUrl: const String.fromEnvironment('API_URL',
               defaultValue: 'https://localhost:8080'));
-  DateTime get now => widget.now?.call() ?? DateTime.now();
+  DateTime get now => widget.now?.call() ?? api.serverNow;
   final scroll = ScrollController();
   final email = TextEditingController();
   final code = TextEditingController();
@@ -627,22 +627,21 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text('Pedido ${offer['orderId']}'),
-                                      Text(
-                                          'Oferta disponible hasta ${offer['expiresAt']}'),
+                                      OfferDetails(offer: offer),
                                       Row(children: [
                                         TextButton(
-                                            onPressed: busy
-                                                ? null
-                                                : () => run(() async {
-                                                      await api.call(
-                                                          '/couriers/offers/${offer['id']}/decision',
-                                                          method: 'POST',
-                                                          body: {
-                                                            'accept': true
-                                                          });
-                                                      await reload();
-                                                    }),
+                                            onPressed:
+                                                busy || offer['preview'] is! Map
+                                                    ? null
+                                                    : () => run(() async {
+                                                          await api.call(
+                                                              '/couriers/offers/${offer['id']}/decision',
+                                                              method: 'POST',
+                                                              body: {
+                                                                'accept': true
+                                                              });
+                                                          await reload();
+                                                        }),
                                             child: const Text('Aceptar')),
                                         TextButton(
                                             onPressed: busy

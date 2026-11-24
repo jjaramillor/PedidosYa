@@ -224,3 +224,32 @@ Dos escenarios adicionales envían tres notificaciones firmadas concurrentes de 
 Resultado final de estas validaciones: 29 pruebas de integración MVP aprobadas, cero fallos y cero omitidas. Reporte: `TestResults/finance-refund-reconcile.trx`. El log local es `D:/Development/PedidosYa/temp/finance-refund-reconcile.log`. Los webhooks iniciales y las credenciales reales del proveedor requieren la validación del entorno piloto F4-04. Flutter no cambió y no se recompiló el APK en este avance.
 
 La API local se actualizó con el binario Release ya validado, manteniendo el entorno Development con sandbox y los volúmenes privados existentes. `/health/ready` devolvió 200 después del reinicio.
+
+
+## Rendición, liquidaciones y cupones
+
+F2-04 y F2-05 verificadas el 24 de noviembre de 2026 en PostGIS/Redis aislados de integración. Se añadieron tres casos al recorrido financiero:
+
+- Entrega en efectivo: el saldo por rendir es negativo, un repartidor sin permiso no puede registrar rendición y no se puede ingresar más que la deuda. Dos rendiciones concurrentes con la misma clave generan un único asiento y una auditoría. La liquidación del comercio se cierra concurrentemente sin duplicados y se registra una referencia ficticia de pago externo; el reintento no sobrescribe la referencia inicial. Saldo pendiente cero y asientos balanceados.
+- Cupón financiado por comercio y cupón financiado por plataforma: cada uno descuenta 500 unidades menores sobre subtotal 2500. Con comisión de 15 %, el comercio recibe 1700 o 2125 respectivamente; el repartidor conserva su tarifa más propina. Se verifica uso único del cupón y conservación del total entre cuentas.
+- Tras pagar una liquidación del repartidor se añade un incentivo de 101 unidades menores, se repite y se reembolsa la compra. La liquidación original queda idéntica; incentivo y devolución forman movimientos pendientes nuevos. El saldo pendiente puede ser negativo para compensaciones futuras: no se realiza un cobro ni una transferencia bancaria. Se conserva balance por asiento.
+
+Pruebas: `Cash_collection_settlement_and_payment_reference_are_idempotent_and_audited` y `Funded_coupon_distribution_and_adjustments_preserve_closed_settlements`. Son operaciones sintéticas y referencias `FICTICIO-*`; la aceptación por interfaz y los procedimientos financieros del piloto siguen separados.
+
+## Ofertas informadas en Android
+
+F3-06 completada el 24 de noviembre de 2026. Las ofertas pendientes y vigentes incorporan `preview`: nombre del restaurante, distancia desde la última ubicación declarada hasta el restaurante, distancia de entrega, ganancia estimada (tarifa de reparto más propina), moneda, método de pago y efectivo a recaudar cuando corresponda. Las distancias son aproximadas en línea recta, no rutas ni tiempos de navegación. No se incluyen domicilio, coordenadas del cliente ni PIN. El historial no conserva esa vista previa y otro cliente no recibe las ofertas del repartidor.
+
+Flutter muestra estos datos antes de aceptar. Si la API no proporciona el detalle, la aceptación queda deshabilitada y se indica actualizar; se conserva la opción de rechazar. La hora límite se muestra en la zona del dispositivo. Durante la prueba se detectó desfase del reloj del emulador: la caducidad ahora usa `Date` de las respuestas de la API y tiempo transcurrido monotónico, con retiro conservador en el límite de precisión del encabezado. Una regresión verifica que el reloj del servidor prevalezca sobre el reloj local. Si no se recibe un encabezado válido, se conserva la última referencia disponible o el reloj local antes de calibrarse; la API siempre aplica su propia caducidad.
+
+Prueba visual con el pedido sintético `debb7e17-8b8a-44a0-b0e8-e778994384be`, preparado por API hasta oferta pendiente. Android consultó la oferta y mostró Sucursal QA 41d27e69, 0,0 km hasta el restaurante, 1,6 km de entrega, ganancia estimada PEN 5,56 y pago con tarjeta sin cobro de efectivo. Se pulsó Rechazar, la oferta desapareció y la auditoría registró `offer.rejected`. Después se canceló únicamente ese fixture mediante la API del comercio y se dejó al repartidor QA no disponible. No se modificaron pedidos completados.
+
+[Captura del detalle de oferta](oferta-detalle-android.png). La captura se obtuvo antes del ajuste de reloj; el diseño no cambió después. El ajuste de caducidad se validó automáticamente y se incluyó en el APK final. Esto no acredita navegación por carretera ni aceptación completa de F1-05: sigue pendiente la reasignación después del retiro por interfaz.
+
+Resultado: 34 pruebas de integración MVP aprobadas, cero omitidas (`TestResults/five-tasks-finance-offers.trx`), análisis Flutter sin observaciones y 26 pruebas Flutter aprobadas. El widget del detalle se comprueba a 360 px. APK final compilado e instalado como `.artifacts/mobile/Delivery-emulator-offers-debug.apk`; logs locales `D:/Development/PedidosYa/temp/five-tasks-mobile.log` y `D:/Development/PedidosYa/temp/five-tasks-apk.log`. No hay cambios Angular en este avance.
+
+## Trazabilidad y ensayo de recuperación
+
+La [matriz de las 20 RN](reglas-negocio.md) se cotejó con las filas del DOCX original y registra su SHA-256. Distingue pruebas ejecutadas, revisión de código, diferencias de alcance y decisiones pendientes. F3-07 cierra trazabilidad; no certifica cumplimiento integral de cada RN. Los pendientes sobre vehículo/preparación, retención GPS, segmentación, impuestos y normativa permanecen visibles.
+
+F4-06 dispone de [script y ensayo reproducible de respaldo/restauración](respaldo-restauracion.md). Se restauraron 89 tablas cotejadas, 19 documentos, un archivo de claves y configuración privada; ACL protegida, archivos idénticos por SHA-256 y contabilidad balanceada. La base se restauró en un contenedor sin red, distinto de la aplicación. La configuración privada y los respaldos no se incorporan a Git. El procedimiento documenta sus límites y lo que falta repetir en el piloto.

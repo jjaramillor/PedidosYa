@@ -6,7 +6,11 @@ namespace Delivery.Modules.Dispatch;
 public sealed record CourierApplication(string Vehicle,string[] DocumentIds);
 public sealed record CourierAvailability(bool Available,Guid ZoneId,Coordinate Location);
 public sealed record CourierDecision(string Status,string Reason);
-public sealed record OfferInfo(Guid Id,Guid OrderId,Guid CourierId,string State,DateTimeOffset ExpiresAt);
+public sealed record OfferPreview(string RestaurantName,double? PickupKilometers,double DeliveryKilometers,long EstimatedEarnings,string Currency,string PaymentMethod,long CashToCollect);
+public sealed record OfferInfo(Guid Id,Guid OrderId,Guid CourierId,string State,DateTimeOffset ExpiresAt)
+{
+ public OfferPreview? Preview {get;init;}
+}
 public sealed class DispatchService(NpgsqlDataSource source,IOrderDirectory orders,IMerchantDirectory merchants,ICoverageDirectory coverage,IIdentityDirectory identities):ICourierDirectory,IDispatchDirectory,IModuleMigration
 {
  public Task ApplyAsync(CancellationToken ct)=>MigrateAsync(source,typeof(DispatchService).Assembly,"dispatch-001","Delivery.Modules.Dispatch.Infrastructure.001.sql",ct);
@@ -66,8 +70,27 @@ public sealed class DispatchService(NpgsqlDataSource source,IOrderDirectory orde
  }
  public async Task<OfferInfo[]> OffersAsync(Caller caller,CancellationToken ct)
  {
-  await using var db=await source.OpenConnectionAsync(ct);await using var query=Command(db,null,"SELECT id,order_id,courier_id,state,expires_at FROM dispatch.offers WHERE @admin OR courier_id=@user ORDER BY created_at DESC LIMIT 100",("admin",caller.Can("orders.operate")),("user",caller.Id));
-  await using var reader=await query.ExecuteReaderAsync(ct);var result=new List<OfferInfo>();while(await reader.ReadAsync(ct))result.Add(new(reader.GetGuid(0),reader.GetGuid(1),reader.GetGuid(2),reader.GetString(3),new(reader.GetDateTime(4))));return result.ToArray();
+  await using var db=await source.OpenConnectionAsync(ct);
+  await using var query=Command(db,null,"SELECT o.id,o.order_id,o.courier_id,o.state,o.expires_at,c.latitude,c.longitude FROM dispatch.offers o LEFT JOIN dispatch.couriers c ON c.id=o.courier_id WHERE @admin OR o.courier_id=@user ORDER BY o.created_at DESC LIMIT 100",("admin",caller.Can("orders.operate")),("user",caller.Id));
+  var rows=new List<(OfferInfo Offer,Coordinate? Location)>();
+  await using(var reader=await query.ExecuteReaderAsync(ct))
+   while(await reader.ReadAsync(ct)) rows.Add((new(reader.GetGuid(0),reader.GetGuid(1),reader.GetGuid(2),reader.GetString(3),new(reader.GetDateTime(4))),reader.IsDBNull(5)||reader.IsDBNull(6)?null:new(reader.GetDouble(5),reader.GetDouble(6))));
+  var result=new List<OfferInfo>();
+  foreach(var (offer,location) in rows)
+  {
+   var enriched=offer;
+   if(offer.State=="pending"&&offer.ExpiresAt>DateTimeOffset.UtcNow)
+   {
+    var order=await orders.GetAsync(offer.OrderId,ct);
+    if(order.State is "accepted" or "preparing" or "ready")
+     enriched=offer with {Preview=new(order.Quote.Branch.Name,
+      location is null?null:Math.Round(Geo.Kilometers(location,order.Quote.Branch.Location),1),
+      Math.Round(Geo.Kilometers(order.Quote.Branch.Location,order.Quote.Address.Location),1),
+      checked(order.Quote.CourierPay+order.Quote.Tip),order.Quote.Currency,order.Method,order.Method=="cash"?order.Quote.Total:0)};
+   }
+   result.Add(enriched);
+  }
+  return result.ToArray();
  }
  public async Task DecideOfferAsync(Caller caller,Guid offer,bool accept,CancellationToken ct)
  {
