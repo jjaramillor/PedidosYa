@@ -44,7 +44,7 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
 
     private sealed record DeliveryScenario(Caller Admin,AuthSession Customer,Caller Owner,Caller Courier,AuthSession CourierSession,QuoteSnapshot Quote,OrderView Order)
     {public AuthSession OwnerSession {get;init;}=null!;}
-    private async Task<DeliveryScenario> PrepareDelivery(string method)
+    private async Task<DeliveryScenario> PrepareDelivery(string method,bool arrive=true,bool assign=true)
     {
         await fixture.ResetAsync();
         var admin=CallerFor(await Register("admin@mvp.test"),true);
@@ -78,10 +78,11 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         Assert.Null(await Service<DispatchService>().AssignedAsync(order.Id,Ct));
         await using(var renew=fixture.Source.CreateCommand("UPDATE dispatch.offers SET expires_at=now()+interval '2 minutes' WHERE id=@id"))
         {renew.Parameters.AddWithValue("id",offer.Id);await renew.ExecuteNonQueryAsync();}
+        if(!assign)return new(admin,customer,owner,courier,courierSession,quote,order){OwnerSession=ownerSession};
         await Service<DispatchService>().DecideOfferAsync(courier,offer.Id,true,Ct);await Drain();
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"preparing","prepare"),Ct);
         await Service<OrderService>().ActionAsync(owner,order.Id,new(Guid.NewGuid(),"ready","ready"),Ct);await Drain();
-        await Service<DeliveryService>().ActionAsync(courier,order.Id,new(Guid.NewGuid(),"arrived",null,null,"arrived"),Ct);
+        if(arrive)await Service<DeliveryService>().ActionAsync(courier,order.Id,new(Guid.NewGuid(),"arrived",null,null,"arrived"),Ct);
         return new(admin,customer,owner,courier,courierSession,quote,order){OwnerSession=ownerSession};
     }
     private async Task StartRoute(DeliveryScenario scenario)
@@ -328,6 +329,97 @@ public sealed class MvpIntegrationTests(IntegrationFixture fixture):IClassFixtur
         Assert.False((await merchant.Invoke("Subscribe",order)).TryGetProperty("error",out _));
         await realtime.PublishAsync(order,new{State="after-resubscribe"},Ct);
         Assert.Equal("after-resubscribe",(await merchant.Read()).GetProperty("arguments")[0].GetProperty("update").GetProperty("state").GetString());
+    }
+
+    private async Task<AuthSession> AdditionalCourier(DeliveryScenario scenario,string email)
+    {
+        var session=await Register(email);var courier=CallerFor(session);
+        await Service<DispatchService>().ApplyAsync(courier,new("bicycle",[await Document(courier)]),Ct);
+        await Service<DispatchService>().DecideAsync(scenario.Admin,courier.Id,new("approved","replacement verified"),Ct);
+        var location=scenario.Quote.Branch.Location;
+        var zone=await Service<ConfigurationService>().LocateAsync(location,Ct);
+        await Service<DispatchService>().AvailabilityAsync(courier,new(true,zone.ZoneId,location),Ct);
+        return session;
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Reassignment_revokes_former_courier_and_hides_historical_GPS(bool arrived)
+    {
+        var scenario=await PrepareDelivery("card",arrive:arrived);var order=scenario.Order.Id;
+        var delivery=Service<DeliveryService>();var dispatch=Service<DispatchService>();
+        var replacement=CallerFor(await AdditionalCourier(scenario,"replacement@mvp.test"));
+        var client=fixture.Factory.Server.CreateWebSocketClient();
+        client.ConfigureRequest=request=>request.Headers["Authorization"]="Bearer "+scenario.Customer.AccessToken;
+        using var liveProbe=new SignalRProbe(await client.ConnectAsync(new Uri("ws://localhost/hubs/orders"),Ct));
+        await liveProbe.Send(new{protocol="json",version=1});await liveProbe.Read();
+        await liveProbe.Invoke("Subscribe",order);
+        await delivery.UpdateLocationAsync(scenario.Courier,order,new(-12.045,-77.045),Ct);
+        Assert.NotNull((await delivery.GetAsync(CallerFor(scenario.Customer),order,Ct)).LastLocation);
+        await using(var db=await fixture.Source.OpenConnectionAsync())
+        await using(var tx=await db.BeginTransactionAsync())
+        {
+            await Outbox.EnqueueAsync(db,tx,"deliveries.location-updated.v1",new{OrderId=order,Latitude=-12.045,Longitude=-77.045},"legacy-location",Ct);
+            await tx.CommitAsync();
+        }
+        var denied=await Assert.ThrowsAsync<ApiException>(()=>dispatch.ReassignAsync(CallerFor(scenario.Customer),order,replacement.Id,"unauthorized",delivery,Ct));
+        Assert.Equal(403,denied.StatusCode);
+        var ineligible=await Assert.ThrowsAsync<ApiException>(()=>dispatch.ReassignAsync(scenario.Admin,order,Guid.NewGuid(),"unknown courier",delivery,Ct));
+        Assert.Equal("courier_ineligible",ineligible.Code);
+        Assert.Equal(scenario.Courier.Id,await dispatch.AssignedAsync(order,Ct));
+        await dispatch.ReassignAsync(scenario.Admin,order,replacement.Id,"replacement before pickup",delivery,Ct);
+        // Dispatch commits before the delivery consumer runs: old GPS must already be hidden.
+        Assert.Null((await delivery.GetAsync(CallerFor(scenario.Customer),order,Ct)).LastLocation);
+        await Drain();
+        await liveProbe.Send(new{type=1,invocationId="barrier",target="Unsubscribe",arguments=new[]{order}});
+        var reachedBarrier=false;var legacyRefresh=false;
+        for(var i=0;i<20;i++)
+        {
+            var frame=await liveProbe.Read();
+            if(frame.GetProperty("type").GetInt32()==3){Assert.Equal("barrier",frame.GetProperty("invocationId").GetString());reachedBarrier=true;break;}
+            var update=frame.GetProperty("arguments")[0].GetProperty("update");
+            if(update.GetProperty("kind").GetString()=="location")legacyRefresh=true;
+            Assert.False(update.TryGetProperty("latitude",out _),"A queued location from the former courier leaked after reassignment.");
+        }
+        Assert.True(reachedBarrier);Assert.True(legacyRefresh);
+        var assigned=await delivery.GetAsync(replacement,order,Ct);
+        Assert.Equal(replacement.Id,assigned.CourierId);Assert.Equal("assigned",assigned.State);Assert.Null(assigned.LastLocation);
+        var former=await Assert.ThrowsAsync<ApiException>(()=>delivery.GetAsync(scenario.Courier,order,Ct));Assert.Equal(403,former.StatusCode);
+        await Assert.ThrowsAsync<ApiException>(()=>delivery.UpdateLocationAsync(scenario.Courier,order,new(-12.04,-77.04),Ct));
+        await Assert.ThrowsAsync<ApiException>(()=>delivery.ActionAsync(scenario.Courier,order,new(Guid.NewGuid(),"arrived",null,null,"stale courier action"),Ct));
+        Assert.DoesNotContain(order,await delivery.ActiveOrdersAsync(scenario.Courier.Id,Ct));
+        await liveProbe.Invoke("Subscribe",order);
+        var point=new Coordinate(-12.041,-77.041);await delivery.UpdateLocationAsync(replacement,order,point,Ct);await Drain();
+        Assert.Equal(point,(await delivery.GetAsync(CallerFor(scenario.Customer),order,Ct)).LastLocation);
+        var gps=(await liveProbe.Read()).GetProperty("arguments")[0].GetProperty("update");
+        Assert.Equal(point.Latitude,gps.GetProperty("latitude").GetDouble());Assert.Equal(point.Longitude,gps.GetProperty("longitude").GetDouble());
+        await liveProbe.Invoke("Unsubscribe",order);
+        await delivery.ActionAsync(replacement,order,new(Guid.NewGuid(),"arrived",null,null,"replacement arrived"),Ct);
+        var pickup=(await delivery.GetAsync(scenario.Owner,order,Ct)).PickupPin;
+        await delivery.ActionAsync(replacement,order,new(Guid.NewGuid(),"picked_up",pickup,null,"replacement pickup"),Ct);await Drain();
+        var late=await Assert.ThrowsAsync<ApiException>(()=>dispatch.ReassignAsync(scenario.Admin,order,scenario.Courier.Id,"too late",delivery,Ct));
+        Assert.Equal("delivery_already_picked",late.Code);Assert.Equal(409,late.StatusCode);
+        Assert.Equal(replacement.Id,await dispatch.AssignedAsync(order,Ct));
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM platform.audit WHERE action='courier.reassigned'"));
+    }
+
+    [Fact]
+    public async Task Rejected_offer_moves_to_another_candidate_without_duplicate_assignment()
+    {
+        var scenario=await PrepareDelivery("card",assign:false);var dispatch=Service<DispatchService>();
+        var replacement=CallerFor(await AdditionalCourier(scenario,"replacement@mvp.test"));
+        var original=Assert.Single(await dispatch.OffersAsync(scenario.Courier,Ct));
+        await dispatch.DecideOfferAsync(scenario.Courier,original.Id,false,Ct);
+        Assert.Null(await dispatch.AssignedAsync(scenario.Order.Id,Ct));
+        await dispatch.OfferAsync(scenario.Order.Id,Ct);
+        var next=Assert.Single(await dispatch.OffersAsync(replacement,Ct));Assert.Equal("pending",next.State);
+        Assert.Equal("rejected",Assert.Single(await dispatch.OffersAsync(scenario.Courier,Ct)).State);
+        await Task.WhenAll(dispatch.DecideOfferAsync(replacement,next.Id,true,Ct),dispatch.DecideOfferAsync(replacement,next.Id,true,Ct));await Drain();
+        Assert.Equal(replacement.Id,await dispatch.AssignedAsync(scenario.Order.Id,Ct));
+        Assert.Equal(replacement.Id,(await Service<DeliveryService>().GetAsync(replacement,scenario.Order.Id,Ct)).CourierId);
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM dispatch.offers WHERE state='accepted'"));
+        Assert.Equal(1,await fixture.CountAsync("SELECT count(*) FROM deliveries.deliveries"));
     }
 
     [Fact]

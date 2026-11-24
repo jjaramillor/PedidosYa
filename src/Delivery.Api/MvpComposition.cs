@@ -93,7 +93,15 @@ public sealed class MvpEventHandler(string type,IServiceScopeFactory scopes):IMe
     await s.GetRequiredService<IOrderRealtime>().PublishAsync(order,new{Kind="delivery",State=deliveryState},ct);break;
    case "deliveries.location-updated.v1":
     var current=await orders.GetAsync(order,ct);
-    if(current.State is not ("delivered" or "closed" or "cancelled" or "returned"))await s.GetRequiredService<IOrderRealtime>().PublishAsync(order,new{Kind="location",Latitude=payload.GetProperty("Latitude").GetDouble(),Longitude=payload.GetProperty("Longitude").GetDouble()},ct);break;
+    if(current.State is not ("delivered" or "closed" or "cancelled" or "returned"))
+    {
+     // Legacy queued events lack courier identity: refresh clients without exposing coordinates.
+     if(!payload.TryGetProperty("CourierId",out var locatedCourier))
+      await s.GetRequiredService<IOrderRealtime>().PublishAsync(order,new{Kind="location"},ct);
+     else if(await s.GetRequiredService<DispatchService>().AssignedAsync(order,ct)==locatedCourier.GetGuid())
+      await s.GetRequiredService<IOrderRealtime>().PublishAsync(order,new{Kind="location",Latitude=payload.GetProperty("Latitude").GetDouble(),Longitude=payload.GetProperty("Longitude").GetDouble()},ct);
+    }
+    break;
    case "payments.refunded.v1":
     await s.GetRequiredService<LedgerService>().RefundAsync(await orders.GetAsync(order,ct),payload.GetProperty("Amount").GetInt64(),payload.GetProperty("OperationId").GetGuid(),ct);break;
   }

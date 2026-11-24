@@ -57,10 +57,11 @@ public sealed class DeliveryService(NpgsqlDataSource source,IOrderDirectory orde
    evidence=reader.IsDBNull(4)?null:reader.GetGuid(4);
   }
   Coordinate? location=null;
-  // Do not expose or collect courier position after delivery/cancellation.
-  if(state is "assigned" or "arrived" or "picked_up" or "in_transit" or "incident")
+  // A reassignment may commit before this module consumes its event.
+  // Never expose the former courier's location during that interval or afterward.
+  if((state is "assigned" or "arrived" or "picked_up" or "in_transit" or "incident")&&await dispatch.AssignedAsync(order,ct)==courier)
   {
-   await using var query=Command(db,null,"SELECT latitude,longitude FROM deliveries.locations WHERE order_id=@id AND recorded_at>now()-interval '5 minutes' ORDER BY recorded_at DESC LIMIT 1",("id",order));
+   await using var query=Command(db,null,"SELECT latitude,longitude FROM deliveries.locations WHERE order_id=@id AND courier_id=@courier AND recorded_at>now()-interval '5 minutes' ORDER BY recorded_at DESC LIMIT 1",("id",order),("courier",courier));
    await using var reader=await query.ExecuteReaderAsync(ct);if(await reader.ReadAsync(ct))location=new(reader.GetDouble(0),reader.GetDouble(1));
   }
   var destination=state is "assigned" or "arrived"?item.Quote.Branch.Location:item.Quote.Address.Location;
@@ -74,7 +75,7 @@ public sealed class DeliveryService(NpgsqlDataSource source,IOrderDirectory orde
   await using(var active=Command(db,tx,"SELECT EXISTS(SELECT 1 FROM deliveries.deliveries WHERE order_id=@id AND courier_id=@user AND state IN('assigned','arrived','picked_up','in_transit','incident'))",("id",order),("user",caller.Id)))
    Guard.Require(await active.ExecuteScalarAsync(ct) is true,"location_not_active","El seguimiento no está activo.",409);
   await ExecuteAsync(db,tx,"INSERT INTO deliveries.locations(id,order_id,courier_id,latitude,longitude) VALUES (@id,@order,@user,@lat,@lon)",ct,("id",Guid.CreateVersion7()),("order",order),("user",caller.Id),("lat",location.Latitude),("lon",location.Longitude));
-  await Outbox.EnqueueAsync(db,tx,"deliveries.location-updated.v1",new{OrderId=order,location.Latitude,location.Longitude},caller.Correlation,ct);await tx.CommitAsync(ct);
+  await Outbox.EnqueueAsync(db,tx,"deliveries.location-updated.v1",new{OrderId=order,CourierId=caller.Id,location.Latitude,location.Longitude},caller.Correlation,ct);await tx.CommitAsync(ct);
  }
  public async Task ActionAsync(Caller caller,Guid order,DeliveryAction request,CancellationToken ct)
  {

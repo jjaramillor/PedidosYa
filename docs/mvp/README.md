@@ -101,3 +101,5 @@ Tiempo real: transporte SignalR sobre WebSockets verificado con aislamiento de p
 Recorrido simultáneo F1-02 aprobado con sesiones aisladas de cliente, comercio, operador y Android: pedido sandbox S/32,56 cerrado. [Evidencia y correcciones de PIN/GPS](validacion-local.md#recorrido-simultáneo-por-interfaces). F1-03 conserva pendiente la reconexión visual; F1-06 quedó completada posteriormente con consulta de la resolución en Android.
 
 F1-06 completada: el repartidor consultó desde la app reiniciada la resolución guardada por el operador. [Evidencia](validacion-local.md#respuesta-de-soporte-visible-en-android).
+
+Reasignación: privacidad de posiciones anteriores corregida en consultas y eventos; 17 pruebas de integración MVP aprobadas para elegibilidad, permisos, reemplazo previo al retiro y bloqueo posterior. [Evidencia](validacion-local.md#reasignación-y-privacidad-de-ubicación). La aceptación desde las interfaces sigue pendiente en F1-05.

@@ -104,3 +104,18 @@ Se recompiló e instaló `.artifacts/mobile/Delivery-emulator-soporte-debug.apk`
 Análisis Flutter sin observaciones y 19 pruebas aprobadas, con regresiones para selección de caso del pedido correcto y ausencia de solicitudes. Compilación debug aprobada; log local `D:/Development/PedidosYa/temp/mvp-soporte-respuesta-build.log`. Los permisos del backend no cambiaron y se conservan las 14 pruebas de integración aprobadas del avance anterior.
 
 La consulta es manual y muestra la última solicitud del pedido. No introduce notificaciones push ni un historial completo de conversaciones. Reconexión visual, revisión/suspensión de participantes y reasignación siguen en el TODO.
+
+
+## Reasignación y privacidad de ubicación
+
+Avance del 23 de noviembre de 2026. Pruebas repetibles contra PostGIS/Redis verifican la reasignación desde `assigned` y desde `arrived`: solo un operador autorizado puede ejecutarla y el candidato debe ser elegible. El nuevo repartidor recibe una entrega en `assigned`; el anterior pierde lectura, acciones, envío GPS y el pedido en su lista. Tras retirar con PIN, la reasignación se rechaza con 409 y se conserva el repartidor vigente. La intervención queda auditada.
+
+Otra prueba verifica rechazo de oferta, selección de otro candidato y dos aceptaciones simultáneas de la misma oferta sin duplicar asignación ni entrega.
+
+Se reprodujo y corrigió una exposición de ubicación histórica: al cambiar el repartidor, la consulta podía seguir devolviendo la posición anterior, incluso antes de consumir el evento de asignación. Ahora la consulta exige coincidencia con la asignación vigente y selecciona únicamente posiciones del repartidor de la entrega. Se conservan los registros para su política de retención existente; no se borran para simular el resultado.
+
+Los eventos GPS nuevos incluyen `CourierId`. El consumidor ignora las coordenadas de un repartidor que ya no está asignado. Los eventos antiguos pendientes sin ese campo solo solicitan una actualización del cliente, sin reenviar coordenadas. La prueba usa WebSockets reales de integración para comprobar que posiciones antiguas en Outbox no se filtren y que una ubicación nueva del reemplazo sí se reciba.
+
+La aceptación visual de rechazo/reasignación continúa abierta en F1-05. Este avance no cambia pantallas ni requiere un APK nuevo.
+
+Resultado: 17 pruebas de integración MVP aprobadas, cero fallos y cero omitidas. Evidencia local: `TestResults/mvp-reasignacion.trx`. No se repitieron las pruebas Flutter porque este avance solo modifica backend y pruebas de integración.
